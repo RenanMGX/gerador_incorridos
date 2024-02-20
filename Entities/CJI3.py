@@ -5,6 +5,7 @@ import xlwings as xw # type: ignore
 from time import sleep
 import os
 from getpass import getuser
+import traceback
 
 
 speak:bool=False
@@ -52,7 +53,7 @@ class CJI3:
         return wrap
     
     def _listar_empreendimentos(self) -> list:
-        path:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - _Base de Dados - Geral\\Informações de Obras.xlsx"
+        path:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Base de Dados - Geral\\Informações de Obras.xlsx"
         if os.path.exists(path):
             df = pd.read_excel(path)['Código da Obra']
             return df.unique().tolist()
@@ -122,19 +123,29 @@ class CJI3:
                         app = xw.Book(file)
                         app.close()
                         sleep(1)
-                    print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}     Finalizado!")
+                    print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")
                 except Exception as error:
-                    print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}     error -> {type(error)} -> {error}")
+                    print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
                     continue
     
-        print(f"tempo de execução: {datetime.now() - agora}")                
+        tempo = f"tempo de execução: {datetime.now() - agora}"
+        print(tempo)
+        with open("temp.txt", "w")as _file:
+            _file.write(tempo)               
         
         
 
 if __name__ == "__main__":
     speak=True
-    bot: CJI3 = CJI3()
     
-    print(bot.gerarRelatorio())
+    try:
+        bot: CJI3 = CJI3()
+        print(bot.gerarRelatorio())
+    except Exception:
+        error = traceback.format_exc()
+        print(error)
+        with open("temp.txt", "w")as _file:
+            _file.write(error)               
+    input()
     #print(bot.tempPath)
     
