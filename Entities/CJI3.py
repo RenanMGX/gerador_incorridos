@@ -6,9 +6,15 @@ from time import sleep
 import os
 from getpass import getuser
 import traceback
+import subprocess
+import json
 
 
 speak:bool=False
+
+def credencial():
+    with open("creden.json", 'r')as _file:
+        return json.load(_file)
 
 def add_bar(path: str) -> str:
     if path[-1] != "\\":
@@ -39,10 +45,22 @@ class CJI3:
     def conectar_sap(f):
         def wrap(*args, **kwargs):
             try:
+                path_sap = r"C:\Program Files (x86)\SAP\FrontEnd\SapGui\saplogon.exe"
+                subprocess.Popen(path_sap)
+                sleep(5)
+                
                 SapGuiAuto: win32com.client.CDispatch = win32com.client.GetObject("SAPGUI")# type: ignore
                 application: win32com.client.CDispatch = SapGuiAuto.GetScriptingEngine# type: ignore
-                connection: win32com.client.CDispatch = application.Children(0)# type: ignore
+                
+                #connection: win32com.client.CDispatch = application.Children(0)# type: ignore
+                connection = application.OpenConnection("S4P", True) # type: ignore
+                
                 session: win32com.client.CDispatch = connection.Children(0)# type: ignore
+                
+                session.findById("wnd[0]/usr/txtRSYST-BNAME").text = dados_credenciais["user"] # Usuario
+                session.findById("wnd[0]/usr/pwdRSYST-BCODE").text = dados_credenciais["pass"] # Senha
+                session.findById("wnd[0]").sendVKey(0)
+                
                 kwargs["session"] = session
                 retorno = f(*args, **kwargs)
                 return retorno
@@ -139,6 +157,8 @@ class CJI3:
 
 if __name__ == "__main__":
     speak=True
+    
+    dados_credenciais = credencial()
     
     try:
         bot: CJI3 = CJI3()
