@@ -32,8 +32,8 @@ class CJI3:
         self.initialDate: str = "01.01.2000"
         
         self.tempPath: str = mountDefaultPath(path)
-        for file in os.listdir(self.tempPath):
-            os.unlink(self.tempPath + file)
+        # for file in os.listdir(self.tempPath):
+        #     os.unlink(self.tempPath + file)
     
         
     def conectar_sap(f):
@@ -108,31 +108,33 @@ class CJI3:
                     #salvando Relatorio
                     file:str = self.tempPath + empreendimento.upper() + ".xlsx"
                     if os.path.exists(file):
-                        app = xw.Book(file)
-                        app.close()
-                        os.unlink(self.tempPath + file)
+                        try:
+                            os.unlink(file)
+                        except PermissionError:
+                            app = xw.Book(file)
+                            app.close()
+                            os.unlink(file)                        
                     sleep(1)
                     session.findById("wnd[0]").sendVKey(43)
                     session.findById("wnd[1]/tbar[0]/btn[0]").press()
                     session.findById("wnd[1]/usr/ctxtDY_PATH").text = self.tempPath
-                    session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento.upper() + ".xlsx"
+                    session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = file
                     session.findById("wnd[1]/tbar[0]/btn[0]").press()
                     
-                    sleep(3)
+                    sleep(7)
                     if os.path.exists(file):
                         app = xw.Book(file)
                         app.close()
-                        sleep(1)
+                        
                     print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")
                 except Exception as error:
                     print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
                     continue
     
         tempo = f"tempo de execução: {datetime.now() - agora}"
-        print(tempo)
+        print(tempo) if speak else None
         with open("temp.txt", "w")as _file:
             _file.write(tempo)               
-        
         
 
 if __name__ == "__main__":
@@ -143,7 +145,7 @@ if __name__ == "__main__":
         print(bot.gerarRelatorio())
     except Exception:
         error = traceback.format_exc()
-        print(error)
+        print(error) if speak else None
         with open("temp.txt", "w")as _file:
             _file.write(error)               
     input()
