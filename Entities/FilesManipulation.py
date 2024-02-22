@@ -1,24 +1,36 @@
 import pandas as pd
 import os
 from time import sleep
-from CJI3 import mountDefaultPath
+from CJI3 import mountDefaultPath # type: ignore
 from getpass import getuser
 from typing import List,Dict
 from datetime import datetime
 from shutil import copy2
-import xlwings as xw
+import xlwings as xw # type: ignore
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 def medir_tempo(f):
     def wrap(*args, **kwargs):
-        agora = datetime.now()
+        agora: datetime = datetime.now()# type: ignore
         result = f(*args, **kwargs)
         print(f"\ntempo de execução: {datetime.now() - agora}\n")
         return result
     return wrap
 
-def _find_element(browser:webdriver.Chrome, method:By, target:str, timeout=60):
+def _find_element(browser:webdriver.Chrome, method:object, target:str, timeout=60):
+    """auxiliador para o selenium ele tenta encontrar o objeto por alguns segundos ajustavel
+       caso encontre retorna o objeto caso não encontre ele vai gerar o erro mas só depois do tempo acabar
+
+    Args:
+        browser (webdriver.Chrome): objeto do chrome seria o navegador
+        method (object): qual methodo ira procurar
+        target (str): endereço que ira procurar
+        timeout (int, optional): tempo limite para tentar achar o objeto. Defaults to 60.
+
+    Returns:
+        webdriver.Chrome : se encontrar retorna o object do webdriver
+    """
     for x in range(timeout):
         try:
             result = browser.find_element(method, target)
@@ -31,22 +43,35 @@ class Files():
     def __init__(self, path="CJI3") -> None:
         self.tempPath: str = mountDefaultPath(path)
     
-    
     def _ler_arquivos(self) -> Dict[str, pd.DataFrame]:
+        """le todos os arquivos na pasta selencionada separa apenas os excel e salva em um dict
+
+        Returns:
+            Dict[str, pd.DataFrame]: nome do arquivo, objeto pd.Dataframe
+        """
         dictionary: dict = {}
         for file in os.listdir(self.tempPath):
             if file.endswith(".xlsx"):
-                fileName = file.replace(".xlsx", "").replace(".PO", "")
-                print(f"{fileName} -> Executando")
+                fileName:str = file.replace(".xlsx", "").replace(".PO", "")
                 try:
-                    df = pd.read_excel(self.tempPath + file)
+                    df: pd.DataFrame = pd.read_excel(self.tempPath + file)
                 except:
                     continue
                 dictionary[fileName] = df
-                break
+                #break
         return dictionary
-
+    
     def calcular_pep_por_data(self, date:datetime, df:pd.DataFrame, termo:str) -> float:
+        """ira fazer os calculor dos valores
+
+        Args:
+            date (datetime): data do filtro
+            df (pd.DataFrame): o dataframe para ser filtrado
+            termo (str): qual é a coluna que será filtrada
+
+        Returns:
+            float: valor filtrado encontrado
+        """
         df = df[(df['Data de lançamento'].dt.year == date.year) & (df['Data de lançamento'].dt.month == date.month)]
         df = df[df['Elemento PEP'].str.contains(termo, case=False)]
         
@@ -57,21 +82,26 @@ class Files():
         return round(valores, 2)
         
     @medir_tempo
-    def gerar_arquivos(self) -> None:
-        self.incc = self.incc_valor()
+    def gerar_arquivos(self, path_new_file:str = f"C:\\Users\\{getuser()}\\Downloads\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
+        r"""ira gerar as planilhas e alimentando com os dados calculados
+
+        Args:
+            path_new_file (str, optional): onde será salvo as planilhas. Defaults to f"C:\Users\{getuser()}\Downloads\Incorridos_{datetime.now().strftime('%d-%m-%Y')}".
+        """
+        self.incc: dict = self.incc_valor()
         for name,df in self._ler_arquivos().items():
-            path_new_file = f"C:\\Users\\renan.oliveira\\Downloads\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}"
-            path_file = path_new_file + "\\" + (name + ".xlsx")
+            print(f"{name} -> Executando")
+            path_file:str = path_new_file + "\\" + (name + ".xlsx")
             
             if not os.path.exists(path_new_file):
                 os.mkdir(path_new_file)
             
             #df['Data de lançamento'] = pd.to_datetime(df['Data de lançamento'])
             datas:List[pd.Timestamp] = df['Data de lançamento'].unique().tolist()
-            datas.pop(datas.index(pd.NaT))
+            datas.pop(datas.index(pd.NaT))# type: ignore
             
             datas = [data.replace(day=1) for data in datas]
-            datas = set(datas)
+            datas = set(datas)# type: ignore
             datas = list(datas)
             datas = sorted(datas)
             datas.reverse()
@@ -86,14 +116,26 @@ class Files():
             
             copy2("modelo planilha\\PEP a PEP - Incorridos - Modelo.xlsx", path_file)
             
+            df = df.replace(float('nan'), "")
+            df = df[~df['Classe de custo'].astype(str).str.startswith('60')]
+            df = df[df['Elemento PEP'] != "POCRCIAI"]
+            df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
+            df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
+            df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
+            
+            #import pdb; pdb.set_trace()            
             app = xw.App(visible=False)
             with app.books.open(path_file)as wb:
                 sheet_principal = wb.sheets['PEP A PEP']
                 sheet_temp = wb.sheets['temp']
                 
-                etapas = len(datas)
-                etapa = 1
+                sheet_principal.range('E2').value = name #Nome
+                sheet_principal.range('E3').value = datetime.now().strftime('%d/%m/%Y') #Data referencia
+                
+                etapas:int = len(datas)
+                etapa:int = 1
                 for date in datas:
+                    agora = datetime.now()
                     print(f"{etapa} / {etapas} --> {date}")
                     
                     sheet_principal.range('N1').api.EntireColumn.Insert()
@@ -101,8 +143,6 @@ class Files():
                     #sheet_principal.range('N1').select()
                     sheet_principal.range('N1').paste()
                     app.api.CutCopyMode = False
-                    
-                    sheet_principal.range('E2').value = name #Nome
                     
                     sheet_principal.range('N6').value = date #data
                     
@@ -150,14 +190,10 @@ class Files():
                                                             [self.calcular_pep_por_data(date, df, "POCRCD29")],
                                                             [self.calcular_pep_por_data(date, df, "POCRCD30")]
                                                             ]
-                    
+                    #print(f"           tempo de execução: {datetime.now() - agora}")
                     sheet_principal.range('N55').value = self.calcular_pep_por_data(date, df, "PONI") # ""
                     
-                    if etapa == etapas:
-                        texto_incc = "Valor Mensal do INCC"
-                    else:
-                        texto_incc = ""
-                    sheet_principal.range('N63').value = texto_incc # ""
+                    sheet_principal.range('N63').value = "Valor Mensal do INCC" if etapa == etapas else "" 
                     
                     try:
                         sheet_principal.range('N64').value = self.incc[date.to_pydatetime()]
@@ -167,38 +203,44 @@ class Files():
                     etapa += 1
                     #break
                 
+                wb.sheets['temp'].delete()
                 wb.save()
             app.kill()            
             #import pdb; pdb.set_trace()
     
-    def incc_valor(self):
+    def incc_valor(self) -> dict:
+        """acessa o site da FGB para extrair o valor do INCC
+
+        Returns:
+            dict: data do indice, valor do indice
+        """
         with webdriver.Chrome()as _navegador:
             _navegador.get("https://extra-ibre.fgv.br/autenticacao_produtos_licenciados/?ReturnUrl=%2fautenticacao_produtos_licenciados%2flista-produtos.aspx")
             
-            _find_element(_navegador, By.ID, 'ctl00_content_hpkGratuito').click()
-            _find_element(_navegador, By.ID, 'dlsCatalogoFixo_imbOpNivelUm_0').click()
-            _find_element(_navegador, By.ID, 'dlsCatalogoFixo_imbOpNivelDois_4').click()
-            _find_element(_navegador, By.ID, 'dlsMovelCorrente_imbIncluiItem_1').click()
-            _find_element(_navegador, By.ID, 'butCatalogoMovelFecha').click()
+            _find_element(browser=_navegador, method=By.ID, target='ctl00_content_hpkGratuito').click()
+            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelUm_0').click()
+            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelDois_4').click()
+            _find_element(browser=_navegador, method=By.ID, target='dlsMovelCorrente_imbIncluiItem_1').click()
+            _find_element(browser=_navegador, method=By.ID, target='butCatalogoMovelFecha').click()
             
-            _find_element(_navegador, By.ID, 'cphConsulta_dlsSerie_lblNome_0')
-            _find_element(_navegador, By.ID, 'cphConsulta_rbtSerieHistorica').click()
-            _find_element(_navegador, By.ID, 'cphConsulta_butVisualizarResultado').click()
+            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_dlsSerie_lblNome_0')
+            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_rbtSerieHistorica').click()
+            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_butVisualizarResultado').click()
             sleep(1)
             _navegador.get("https://extra-ibre.fgv.br/IBRE/sitefgvdados/VisualizaConsultaFrame.aspx")
             
-            tabela = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
+            tabela:list = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
         
         tabela.pop(0)
         tabela.pop(0)
         
-        tabela = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
+        resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
             
-        return tabela    
-        
+        return resultado    
         
 if __name__ == "__main__":
+    """como usar
+    """
     bot = Files()
-    
     #print(f"\n\n{bot.incc_valor()}")
     print(f"\n\n{bot.gerar_arquivos()}")

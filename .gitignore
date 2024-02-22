@@ -1,6 +1,8 @@
 *#Material
 *creden.json
-
+*temp.txt
+*crd.json
+*log_error
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
