@@ -1,3 +1,4 @@
+from numpy import object_
 import pandas as pd
 import os
 from time import sleep
@@ -18,7 +19,7 @@ def medir_tempo(f):
         return result
     return wrap
 
-def _find_element(browser:webdriver.Chrome, method:object, target:str, timeout=60):
+def _find_element(browser:webdriver.Chrome, method, target:str, timeout=60):
     """auxiliador para o selenium ele tenta encontrar o objeto por alguns segundos ajustavel
        caso encontre retorna o objeto caso não encontre ele vai gerar o erro mas só depois do tempo acabar
 
@@ -37,6 +38,7 @@ def _find_element(browser:webdriver.Chrome, method:object, target:str, timeout=6
             return result
         except:
             sleep(2)
+    raise Exception(f"'{target}' não foi encontrado")
         
 
 class Files():
