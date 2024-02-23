@@ -99,7 +99,6 @@ class Files():
         """
         
         self.__path_new_file = path_new_file
-        return
         self.incc: dict = self.incc_valor()
         for name,caminho_arquivo in self._ler_arquivos().items():
             df = pd.read_excel(caminho_arquivo)
