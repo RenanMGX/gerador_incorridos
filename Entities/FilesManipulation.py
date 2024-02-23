@@ -205,7 +205,7 @@ class Files():
                 
                 wb.sheets['temp'].delete()
                 wb.save()
-            app.kill()            
+            app.kill()    
             #import pdb; pdb.set_trace()
     
     def incc_valor(self) -> dict:
@@ -214,33 +214,39 @@ class Files():
         Returns:
             dict: data do indice, valor do indice
         """
-        with webdriver.Chrome()as _navegador:
-            _navegador.get("https://extra-ibre.fgv.br/autenticacao_produtos_licenciados/?ReturnUrl=%2fautenticacao_produtos_licenciados%2flista-produtos.aspx")
-            
-            _find_element(browser=_navegador, method=By.ID, target='ctl00_content_hpkGratuito').click()
-            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelUm_0').click()
-            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelDois_4').click()
-            _find_element(browser=_navegador, method=By.ID, target='dlsMovelCorrente_imbIncluiItem_1').click()
-            _find_element(browser=_navegador, method=By.ID, target='butCatalogoMovelFecha').click()
-            
-            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_dlsSerie_lblNome_0')
-            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_rbtSerieHistorica').click()
-            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_butVisualizarResultado').click()
-            sleep(1)
-            _navegador.get("https://extra-ibre.fgv.br/IBRE/sitefgvdados/VisualizaConsultaFrame.aspx")
-            
-            tabela:list = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
-        
-        tabela.pop(0)
-        tabela.pop(0)
-        
-        resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
-            
-        return resultado    
+        for _ in range(5):
+            try:
+                with webdriver.Chrome()as _navegador:
+                    _navegador.get("https://extra-ibre.fgv.br/autenticacao_produtos_licenciados/?ReturnUrl=%2fautenticacao_produtos_licenciados%2flista-produtos.aspx")
+                    
+                    _find_element(browser=_navegador, method=By.ID, target='ctl00_content_hpkGratuito').click()
+                    _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelUm_0').click()
+                    _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelDois_4').click()
+                    _find_element(browser=_navegador, method=By.ID, target='dlsMovelCorrente_imbIncluiItem_1').click()
+                    _find_element(browser=_navegador, method=By.ID, target='butCatalogoMovelFecha').click()
+                    
+                    _find_element(browser=_navegador, method=By.ID, target='cphConsulta_dlsSerie_lblNome_0')
+                    _find_element(browser=_navegador, method=By.ID, target='cphConsulta_rbtSerieHistorica').click()
+                    _find_element(browser=_navegador, method=By.ID, target='cphConsulta_butVisualizarResultado').click()
+                    sleep(1)
+                    _navegador.get("https://extra-ibre.fgv.br/IBRE/sitefgvdados/VisualizaConsultaFrame.aspx")
+                    
+                    tabela:list = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
+                
+                tabela.pop(0)
+                tabela.pop(0)
+                
+                resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
+                    
+                return resultado   
+            except:
+                sleep(1)
+        raise Exception("não foi possivel obter o indice")
         
 if __name__ == "__main__":
     """como usar
     """
     bot = Files()
     #print(f"\n\n{bot.incc_valor()}")
-    print(f"\n\n{bot.gerar_arquivos()}")
+    #print(f"\n\n{bot.gerar_arquivos()}")
+    print(f"\n\n{bot.incc_valor()}")
