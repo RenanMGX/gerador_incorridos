@@ -85,7 +85,7 @@ class Files():
         return round(valores, 2)
         
     @medir_tempo
-    def gerar_arquivos(self, path_new_file:str = f"C:\\Users\\{getuser()}\\Downloads\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
+    def gerar_arquivos(self, path_new_file:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
         r"""ira gerar as planilhas e alimentando com os dados calculados
 
         Args:
@@ -157,7 +157,7 @@ class Files():
                                                         [self.calcular_pep_por_data(date, df, "POCRCIPJ")],
                                                         [self.calcular_pep_por_data(date, df, "POCRCISP")],
                                                         [self.calcular_pep_por_data(date, df, "POCRCIIP")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCIIPR")],
+                                                        [self.calcular_pep_por_data(date, df, "POCRCIPR")],
                                                         [self.calcular_pep_por_data(date, df, "POCRCIEQ")],
                                                         [self.calcular_pep_por_data(date, df, "POCRCIMO")],
                                                         [self.calcular_pep_por_data(date, df, "POCRCICO")]                                                       
@@ -167,7 +167,7 @@ class Files():
                                                             [self.calcular_pep_por_data(date, df, "POCRCD01")],
                                                             [self.calcular_pep_por_data(date, df, "POCRCD02")],
                                                             [self.calcular_pep_por_data(date, df, "POCRCD03")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD03")],
+                                                            [self.calcular_pep_por_data(date, df, "POCRCD04")],
                                                             [self.calcular_pep_por_data(date, df, "POCRCD05")],
                                                             [self.calcular_pep_por_data(date, df, "POCRCD06")],
                                                             [self.calcular_pep_por_data(date, df, "POCRCD07")],
@@ -196,7 +196,9 @@ class Files():
                                                             [self.calcular_pep_por_data(date, df, "POCRCD30")]
                                                             ]
                     #print(f"           tempo de execução: {datetime.now() - agora}")
-                    sheet_principal.range('N55').value = self.calcular_pep_por_data(date, df, "PONI") # ""
+                    sheet_principal.range('N55:N56').value = [[self.calcular_pep_por_data(date, df, "PONI")],
+                                                              [self.calcular_pep_por_data(date, df, "POPZ")]
+                                                               ] # ""
                     
                     sheet_principal.range('N63').value = "Valor Mensal do INCC" if etapa == etapas else "" 
                     
