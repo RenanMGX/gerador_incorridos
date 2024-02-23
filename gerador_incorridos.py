@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime
 import os
 from time import sleep
+from getpass import getuser
 
 def erro_log():
     path_log_error = "log_error"
@@ -23,7 +24,9 @@ if __name__ == "__main__":
         sleep(1)
     for _ in range(5):
         try:
-            Files().gerar_arquivos()
+            bot = Files()
+            bot.gerar_arquivos()
+            bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\")
             break
         except Exception as error:
             print(traceback.format_exc())

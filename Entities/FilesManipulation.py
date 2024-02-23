@@ -44,7 +44,11 @@ def _find_element(browser:webdriver.Chrome, method, target:str, timeout=60):
 class Files():
     def __init__(self, path="CJI3") -> None:
         self.tempPath: str = mountDefaultPath(path)
-        self.incc: dict = self.incc_valor()
+        
+        
+        pasta = "incorridos_gerados"
+        if not os.path.exists(pasta):
+            os.mkdir(pasta)
     
     def _ler_arquivos(self) -> Dict[str, pd.DataFrame]:
         """le todos os arquivos na pasta selencionada separa apenas os excel e salva em um dict
@@ -63,7 +67,7 @@ class Files():
                 except:
                     continue
                 dictionary[fileName] = caminho
-                break
+                #break
         return dictionary
     
     def calcular_pep_por_data(self, date:datetime, df:pd.DataFrame, termo:str) -> float:
@@ -95,6 +99,8 @@ class Files():
         """
         
         self.__path_new_file = path_new_file
+        return
+        self.incc: dict = self.incc_valor()
         for name,caminho_arquivo in self._ler_arquivos().items():
             df = pd.read_excel(caminho_arquivo)
             print(f"{name} -> Executando")
@@ -251,6 +257,15 @@ class Files():
                     
         return resultado   
     
+    def copiar_destino(self, destino):
+        pasta_destino = destino + self.__path_new_file.split("\\")[-1] + "\\"
+        if not os.path.exists(pasta_destino):
+            os.makedirs(pasta_destino)
+        
+        for file in os.listdir(self.__path_new_file):
+            file_path = self.__path_new_file + "\\" + file
+            copy2(file_path, pasta_destino)
+        
         
 if __name__ == "__main__":
     """como usar
@@ -258,4 +273,4 @@ if __name__ == "__main__":
     bot = Files()
     #print(f"\n\n{bot.incc_valor()}")
     #print(f"\n\n{bot.gerar_arquivos()}")
-    print(f"\n\n{bot.incc_valor()}")
+    #print(f"\n\n{bot.incc_valor()}")
