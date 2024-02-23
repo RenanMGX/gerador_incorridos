@@ -63,7 +63,7 @@ class Files():
                 except:
                     continue
                 dictionary[fileName] = caminho
-                #break
+                break
         return dictionary
     
     def calcular_pep_por_data(self, date:datetime, df:pd.DataFrame, termo:str) -> float:
@@ -87,21 +87,21 @@ class Files():
         return round(valores, 2)
         
     @medir_tempo
-    def gerar_arquivos(self, path_new_file:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
+    def gerar_arquivos(self, path_new_file:str = f"incorridos_gerados\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
         r"""ira gerar as planilhas e alimentando com os dados calculados
 
         Args:
             path_new_file (str, optional): onde será salvo as planilhas. Defaults to f"C:\Users\{getuser()}\Downloads\Incorridos_{datetime.now().strftime('%d-%m-%Y')}".
         """
         
-        
+        self.__path_new_file = path_new_file
         for name,caminho_arquivo in self._ler_arquivos().items():
             df = pd.read_excel(caminho_arquivo)
             print(f"{name} -> Executando")
-            path_file:str = path_new_file + "\\" + (name + ".xlsx")
+            path_file:str = self.__path_new_file + "\\" + (name + ".xlsx")
             
-            if not os.path.exists(path_new_file):
-                os.mkdir(path_new_file)
+            if not os.path.exists(self.__path_new_file):
+                os.mkdir(self.__path_new_file)
             
             #df['Data de lançamento'] = pd.to_datetime(df['Data de lançamento'])
             datas:List[pd.Timestamp] = df['Data de lançamento'].unique().tolist()
@@ -129,6 +129,7 @@ class Files():
             df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
             df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
             df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
+            df = df[df['Denomin.da conta de contrapartida'] != "T. ESTOQUE INICIAL"]
             
             #import pdb; pdb.set_trace()            
             app = xw.App(visible=False)
@@ -145,6 +146,7 @@ class Files():
                     agora = datetime.now()
                     print(f"{etapa} / {etapas} --> {date}")
                     
+                    formula_coluna_h = sheet_principal.range('H1:H120').formula
                     sheet_principal.range('N1').api.EntireColumn.Insert()
                     sheet_temp.range('A:A').copy()
                     #sheet_principal.range('N1').select()
@@ -209,6 +211,7 @@ class Files():
                     except:
                         sheet_principal.range('N64').value = 0
                     
+                    sheet_principal.range('H1:H120').formula = formula_coluna_h
                     etapa += 1
                     #break
                 
@@ -247,6 +250,7 @@ class Files():
         resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
                     
         return resultado   
+    
         
 if __name__ == "__main__":
     """como usar
