@@ -16,6 +16,7 @@ def erro_log():
 
 if __name__ == "__main__":
     try:
+        #pass
         CJI3().gerarRelatorio()
     except Exception as error:
         erro_log()
@@ -24,6 +25,8 @@ if __name__ == "__main__":
     for _ in range(5):
         try:
             Files().gerar_arquivos()
+            break
         except Exception as error:
+            print(traceback.format_exc())
             erro_log()
-            sleep(1)
+        sleep(1)

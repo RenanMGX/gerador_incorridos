@@ -42,6 +42,7 @@ def _find_element(browser:webdriver.Chrome, method:object, target:str, timeout=6
 class Files():
     def __init__(self, path="CJI3") -> None:
         self.tempPath: str = mountDefaultPath(path)
+        self.incc: dict = self.incc_valor()
     
     def _ler_arquivos(self) -> Dict[str, pd.DataFrame]:
         """le todos os arquivos na pasta selencionada separa apenas os excel e salva em um dict
@@ -51,13 +52,15 @@ class Files():
         """
         dictionary: dict = {}
         for file in os.listdir(self.tempPath):
+            print(file)
             if file.endswith(".xlsx"):
                 fileName:str = file.replace(".xlsx", "").replace(".PO", "")
                 try:
-                    df: pd.DataFrame = pd.read_excel(self.tempPath + file)
+                    caminho = self.tempPath + file
+                    #df: pd.DataFrame = pd.read_excel(self.tempPath + file)
                 except:
                     continue
-                dictionary[fileName] = df
+                dictionary[fileName] = caminho
                 #break
         return dictionary
     
@@ -88,8 +91,10 @@ class Files():
         Args:
             path_new_file (str, optional): onde será salvo as planilhas. Defaults to f"C:\Users\{getuser()}\Downloads\Incorridos_{datetime.now().strftime('%d-%m-%Y')}".
         """
-        self.incc: dict = self.incc_valor()
-        for name,df in self._ler_arquivos().items():
+        
+        
+        for name,caminho_arquivo in self._ler_arquivos().items():
+            df = pd.read_excel(caminho_arquivo)
             print(f"{name} -> Executando")
             path_file:str = path_new_file + "\\" + (name + ".xlsx")
             
@@ -214,34 +219,30 @@ class Files():
         Returns:
             dict: data do indice, valor do indice
         """
-        for _ in range(5):
-            try:
-                with webdriver.Chrome()as _navegador:
-                    _navegador.get("https://extra-ibre.fgv.br/autenticacao_produtos_licenciados/?ReturnUrl=%2fautenticacao_produtos_licenciados%2flista-produtos.aspx")
+
+        with webdriver.Chrome()as _navegador:
+            _navegador.get("https://extra-ibre.fgv.br/autenticacao_produtos_licenciados/?ReturnUrl=%2fautenticacao_produtos_licenciados%2flista-produtos.aspx")
                     
-                    _find_element(browser=_navegador, method=By.ID, target='ctl00_content_hpkGratuito').click()
-                    _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelUm_0').click()
-                    _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelDois_4').click()
-                    _find_element(browser=_navegador, method=By.ID, target='dlsMovelCorrente_imbIncluiItem_1').click()
-                    _find_element(browser=_navegador, method=By.ID, target='butCatalogoMovelFecha').click()
+            _find_element(browser=_navegador, method=By.ID, target='ctl00_content_hpkGratuito').click()
+            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelUm_0').click()
+            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelDois_4').click()
+            _find_element(browser=_navegador, method=By.ID, target='dlsMovelCorrente_imbIncluiItem_1').click()
+            _find_element(browser=_navegador, method=By.ID, target='butCatalogoMovelFecha').click()
                     
-                    _find_element(browser=_navegador, method=By.ID, target='cphConsulta_dlsSerie_lblNome_0')
-                    _find_element(browser=_navegador, method=By.ID, target='cphConsulta_rbtSerieHistorica').click()
-                    _find_element(browser=_navegador, method=By.ID, target='cphConsulta_butVisualizarResultado').click()
-                    sleep(1)
-                    _navegador.get("https://extra-ibre.fgv.br/IBRE/sitefgvdados/VisualizaConsultaFrame.aspx")
+            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_dlsSerie_lblNome_0')
+            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_rbtSerieHistorica').click()
+            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_butVisualizarResultado').click()
+            sleep(1)
+            _navegador.get("https://extra-ibre.fgv.br/IBRE/sitefgvdados/VisualizaConsultaFrame.aspx")
                     
-                    tabela:list = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
+            tabela:list = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
                 
-                tabela.pop(0)
-                tabela.pop(0)
+        tabela.pop(0)
+        tabela.pop(0)
                 
-                resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
+        resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
                     
-                return resultado   
-            except:
-                sleep(1)
-        raise Exception("não foi possivel obter o indice")
+        return resultado   
         
 if __name__ == "__main__":
     """como usar
