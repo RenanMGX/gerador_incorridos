@@ -185,10 +185,12 @@ class CJI3:
                                 os.unlink(file)
                             except PermissionError:
                                 for _ in range(5):
-                                    app = xw.Book(file)
-                                    app.close()
+                                    for x in xw.apps:
+                                        if empreendimento.upper() + ".xlsx" in x.books[0].name:
+                                            x.kill()
+                                            os.unlink(file)
                                     sleep(1)
-                                os.unlink(file)                        
+                                                        
                         sleep(1)
                         session.findById("wnd[0]").sendVKey(43)
                         session.findById("wnd[1]/tbar[0]/btn[0]").press()
@@ -196,12 +198,11 @@ class CJI3:
                         session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento.upper() + ".xlsx"
                         session.findById("wnd[1]/tbar[0]/btn[0]").press()
                         
-                        sleep(1)
-                        if os.path.exists(file):
-                            for _ in range(5):
-                                app = xw.Book(file)
-                                app.close()
-                                sleep(1)
+                        for _ in range(5):
+                            for x in xw.apps:
+                                if empreendimento.upper() + ".xlsx" in x.books[0].name:
+                                    x.kill()
+                            sleep(1)
                             
                         print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")
                     except Exception as error:
