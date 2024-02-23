@@ -264,6 +264,9 @@ class Files():
         for file in os.listdir(self.__path_new_file):
             file_path = self.__path_new_file + "\\" + file
             copy2(file_path, pasta_destino)
+            os.unlink(file_path)
+        if len(os.listdir(self.__path_new_file)) == 0 :
+            os.rmdir(self.__path_new_file)
         
         
 if __name__ == "__main__":
