@@ -10,6 +10,7 @@ from shutil import copy2
 import xlwings as xw # type: ignore
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import json
 
 def medir_tempo(f):
     def wrap(*args, **kwargs):
@@ -91,23 +92,30 @@ class Files():
         return round(valores, 2)
         
     @medir_tempo
-    def gerar_arquivos(self, path_new_file:str = f"incorridos_gerados\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
+    def gerar_arquivos(self, path_new_file:str = f"incorridos_gerados\\Incorridos") -> None:
         r"""ira gerar as planilhas e alimentando com os dados calculados
 
         Args:
             path_new_file (str, optional): onde será salvo as planilhas. Defaults to f"C:\Users\{getuser()}\Downloads\Incorridos_{datetime.now().strftime('%d-%m-%Y')}".
         """
+        infor_path_base:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\"
+        infor_path:str = [(infor_path_base + x + '\\Informações de Obras.xlsx') for x in os.listdir(infor_path_base) if 'Base de Dados - Geral' in x][0]        
+        infor = pd.read_excel(infor_path)
         
         self.__path_new_file = path_new_file
         self.incc: dict = self.incc_valor()
         for name,caminho_arquivo in self._ler_arquivos().items():
             df = pd.read_excel(caminho_arquivo)
             print(f"{name} -> Executando")
-            path_file:str = self.__path_new_file + "\\" + (name + ".xlsx")
+            
+            temp_name = infor[infor['Código da Obra'] == name[0:4]] # nome pesquisado pelo centro de custo
+            temp_name = temp_name['Nome da Obra'].values[0]
+            
+            path_file:str = self.__path_new_file + "\\" + (f"Incorrido - {name} - {temp_name} - R00.xlsx") # nome do arquivo
             
             if not os.path.exists(self.__path_new_file):
                 os.mkdir(self.__path_new_file)
-            
+                
             #df['Data de lançamento'] = pd.to_datetime(df['Data de lançamento'])
             datas:List[pd.Timestamp] = df['Data de lançamento'].unique().tolist()
             datas.pop(datas.index(pd.NaT))# type: ignore
@@ -142,7 +150,8 @@ class Files():
                 sheet_principal = wb.sheets['PEP A PEP']
                 sheet_temp = wb.sheets['temp']
                 
-                sheet_principal.range('E2').value = name #Nome
+                sheet_principal.range('E2').value = f"{name} - {temp_name}" #Nome
+                
                 sheet_principal.range('E3').value = datetime.now().strftime('%d/%m/%Y') #Data referencia
                 
                 etapas:int = len(datas)
@@ -205,8 +214,11 @@ class Files():
                                                             [self.calcular_pep_por_data(date, df, "POCRCD30")]
                                                             ]
                     #print(f"           tempo de execução: {datetime.now() - agora}")
-                    sheet_principal.range('N55:N56').value = [[self.calcular_pep_por_data(date, df, "PONI")],
-                                                              [self.calcular_pep_por_data(date, df, "POPZ")]
+                    sheet_principal.range('N55').value = [[self.calcular_pep_por_data(date, df, "PONI")]]
+                    
+                    sheet_principal.range('N57:N59').value = [[self.calcular_pep_por_data(date, df, "POPZKT")],
+                                                              [self.calcular_pep_por_data(date, df, "POPZOP")],
+                                                              [self.calcular_pep_por_data(date, df, "POPZMD")]
                                                                ] # ""
                     
                     sheet_principal.range('N63').value = "Valor Mensal do INCC" if etapa == etapas else "" 
@@ -232,32 +244,30 @@ class Files():
             dict: data do indice, valor do indice
         """
 
-        with webdriver.Chrome()as _navegador:
-            _navegador.get("https://extra-ibre.fgv.br/autenticacao_produtos_licenciados/?ReturnUrl=%2fautenticacao_produtos_licenciados%2flista-produtos.aspx")
-                    
-            _find_element(browser=_navegador, method=By.ID, target='ctl00_content_hpkGratuito').click()
-            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelUm_0').click()
-            _find_element(browser=_navegador, method=By.ID, target='dlsCatalogoFixo_imbOpNivelDois_4').click()
-            _find_element(browser=_navegador, method=By.ID, target='dlsMovelCorrente_imbIncluiItem_1').click()
-            _find_element(browser=_navegador, method=By.ID, target='butCatalogoMovelFecha').click()
-                    
-            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_dlsSerie_lblNome_0')
-            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_rbtSerieHistorica').click()
-            _find_element(browser=_navegador, method=By.ID, target='cphConsulta_butVisualizarResultado').click()
-            sleep(1)
-            _navegador.get("https://extra-ibre.fgv.br/IBRE/sitefgvdados/VisualizaConsultaFrame.aspx")
-                    
-            tabela:list = _find_element(_navegador, By.ID, 'xgdvConsulta_DXMainTable').text.split('\n')
-                
-        tabela.pop(0)
-        tabela.pop(0)
-                
-        resultado: dict = {datetime.strptime(x.split(" ")[0], "%m/%Y"):float(x.split(" ")[1].replace(",",".")) for x in tabela}
-                    
-        return resultado   
+        with open("db_connection.json", 'r')as _file:
+            db_config = json.load(_file)
+        
+        import mysql.connector
+        connection = mysql.connector.connect(
+            host=db_config['host'],
+            user=db_config['user'],
+            password=db_config['password'],
+            database=db_config['database']
+        )
+        
+        cursor = connection.cursor()
+        cursor.execute("SELECT mes, valor FROM incc")
+        indices = {}
+        for indice in cursor.fetchall():
+            date = datetime(year=indice[0].year, month=indice[0].month, day=indice[0].day)
+            indices[date] = indice[1]
+        
+        
+        return indices   
     
     def copiar_destino(self, destino):
         pasta_destino = destino + self.__path_new_file.split("\\")[-1] + "\\"
+        
         if not os.path.exists(pasta_destino):
             os.makedirs(pasta_destino)
         
@@ -268,11 +278,23 @@ class Files():
         if len(os.listdir(self.__path_new_file)) == 0 :
             os.rmdir(self.__path_new_file)
         
+        destino_base = destino + "Bases\\"
+        if not os.path.exists(destino_base):
+            os.makedirs(destino_base)
+        
+        destino_base_por_data =  f"{destino_base}\\{datetime.now().strftime('%d-%m-%Y')}"
+        if not os.path.exists(destino_base_por_data):
+            os.makedirs(destino_base_por_data)
+            
+        for file_base in os.listdir(self.tempPath):
+            copy2(self.tempPath + file_base, destino_base_por_data)
+            os.unlink(self.tempPath + file_base, destino_base_por_data)
+        
         
 if __name__ == "__main__":
     """como usar
     """
     bot = Files()
-    #print(f"\n\n{bot.incc_valor()}")
-    #print(f"\n\n{bot.gerar_arquivos()}")
+    print(f"\n\n{bot.gerar_arquivos()}")
+    print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
     #print(f"\n\n{bot.incc_valor()}")

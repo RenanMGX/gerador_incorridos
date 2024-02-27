@@ -60,6 +60,11 @@ class CJI3:
         self.initialDate: str = "01.01.2000"
         
         self.tempPath: str = mountDefaultPath(path)
+        for file in os.listdir(self.tempPath):
+            try:
+                os.unlink(self.tempPath + file)
+            except PermissionError:
+                os.rmdir(self.tempPath + file)
         
     
     def conectar_sap(f):
@@ -125,7 +130,8 @@ class CJI3:
         path:str = [(path_base + x + '\\Informações de Obras.xlsx') for x in os.listdir(path_base) if 'Base de Dados - Geral' in x][0]        
         
         if os.path.exists(path):
-            df = pd.read_excel(path)['Código da Obra']
+            self.df = pd.read_excel(path)
+            df = self.df['Código da Obra']
             return df.unique().tolist()
         raise FileExistsError(f"arquivo não encontrado -> {path}")
     
@@ -144,7 +150,9 @@ class CJI3:
             relatorios:list = [".po"]
             for empre in self._listar_empreendimentos():
                 for relatorio in relatorios:
-                    empreendimento:str = empre + relatorio
+                    
+                    
+                    empreendimento = empre + relatorio
                     print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')} {empreendimento} -> Iniciado")
                     try:
                         #executando CJI3
@@ -178,15 +186,20 @@ class CJI3:
                         if session.findById("wnd[0]/sbar").text == "Não foi selecionado nenhum objeto com os critérios de seleção indicados.":
                             raise FileNotFoundError("Não foi selecionado nenhum objeto com os critérios de seleção indicados.")
                         
+                        temp_name = self.df[self.df['Código da Obra'] == empre] # nome pesquisado pelo centro de custo
+                        temp_name = temp_name['Nome da Obra'].values[0]
+                        empreendimento_for_save:str = f"{empre} - {temp_name} - {datetime.now().strftime('%d-%m-%Y')}"
+                        #import pdb; pdb.set_trace()
+                        
                         #salvando Relatorio
-                        file:str = self.tempPath + empreendimento.upper() + ".xlsx"
+                        file:str = self.tempPath + empreendimento_for_save.upper() + ".xlsx"
                         if os.path.exists(file):
                             try:
                                 os.unlink(file)
                             except PermissionError:
                                 for _ in range(5):
                                     for x in xw.apps:
-                                        if empreendimento.upper() + ".xlsx" in x.books[0].name:
+                                        if empreendimento_for_save.upper() + ".xlsx" in x.books[0].name:
                                             x.kill()
                                             os.unlink(file)
                                     sleep(1)
@@ -195,12 +208,12 @@ class CJI3:
                         session.findById("wnd[0]").sendVKey(43)
                         session.findById("wnd[1]/tbar[0]/btn[0]").press()
                         session.findById("wnd[1]/usr/ctxtDY_PATH").text = self.tempPath
-                        session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento.upper() + ".xlsx"
+                        session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento_for_save.upper() + ".xlsx"
                         session.findById("wnd[1]/tbar[0]/btn[0]").press()
                         
                         for _ in range(5):
                             for x in xw.apps:
-                                if empreendimento.upper() + ".xlsx" in x.books[0].name:
+                                if empreendimento_for_save.upper() + ".xlsx" in x.books[0].name:
                                     x.kill()
                             sleep(1)
                             
@@ -226,12 +239,12 @@ if __name__ == "__main__":
     speak=True
     try:
         bot: CJI3 = CJI3()
-        print(bot.gerarRelatorio())
+        #print(bot.gerarRelatorio())
     except Exception:
         error = traceback.format_exc()
         print(error) if speak else None
         with open("temp.txt", "w")as _file:
             _file.write(error)               
-    input()
+    #input()
     #print(bot.tempPath)
     
