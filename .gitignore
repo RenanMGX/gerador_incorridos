@@ -1,10 +1,12 @@
 *.Material
+*#Material
 *creden.json
 *temp.txt
 *crd.json
 *log_error
 *.vscode/
 *incorridos_gerados
+*db_connection.json
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python

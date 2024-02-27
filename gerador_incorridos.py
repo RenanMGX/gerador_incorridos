@@ -17,11 +17,14 @@ def erro_log():
 
 if __name__ == "__main__":
     try:
-        pass
-        #CJI3().gerarRelatorio()
+        #pass
+        CJI3().gerarRelatorio()
+        
     except Exception as error:
+        print(traceback.format_exc())
         erro_log()
         sleep(1)
+        
     for _ in range(5):
         try:
             bot = Files()

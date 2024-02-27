@@ -92,7 +92,7 @@ class Files():
         return round(valores, 2)
         
     @medir_tempo
-    def gerar_arquivos(self, path_new_file:str = f"incorridos_gerados\\Incorridos") -> None:
+    def gerar_arquivos(self, path_new_file:str = f"incorridos_gerados\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
         r"""ira gerar as planilhas e alimentando com os dados calculados
 
         Args:
@@ -288,7 +288,7 @@ class Files():
             
         for file_base in os.listdir(self.tempPath):
             copy2(self.tempPath + file_base, destino_base_por_data)
-            os.unlink(self.tempPath + file_base, destino_base_por_data)
+            os.unlink(self.tempPath + file_base)
         
         
 if __name__ == "__main__":
