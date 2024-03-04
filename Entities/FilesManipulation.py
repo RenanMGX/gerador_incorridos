@@ -105,7 +105,9 @@ class Files():
         self.__path_new_file = path_new_file
         self.incc: dict = self.incc_valor()
         for name,caminho_arquivo in self._ler_arquivos().items():
-            df = pd.read_excel(caminho_arquivo)
+            #df = pd.read_excel(caminho_arquivo)
+            df = self.tratar_base(caminho=caminho_arquivo, incc_fonte=self.incc)
+
             print(f"{name} -> Executando")
             
             temp_name = infor[infor['Código da Obra'] == name[0:4]] # nome pesquisado pelo centro de custo
@@ -245,9 +247,10 @@ class Files():
         """
 
         with open("db_connection.json", 'r')as _file:
-            db_config = json.load(_file)
+            db_config:dict = json.load(_file)
         
         import mysql.connector
+        
         connection = mysql.connector.connect(
             host=db_config['host'],
             user=db_config['user'],
@@ -257,16 +260,66 @@ class Files():
         
         cursor = connection.cursor()
         cursor.execute("SELECT mes, valor FROM incc")
+        resultado:list = cursor.fetchall()
+        
         indices = {}
-        for indice in cursor.fetchall():
+        for indice in resultado:
             date = datetime(year=indice[0].year, month=indice[0].month, day=indice[0].day)
             indices[date] = indice[1]
         
         
         return indices   
-    
-    def copiar_destino(self, destino):
-        pasta_destino = destino + self.__path_new_file.split("\\")[-1] + "\\"
+
+    def tratar_base(self, caminho:str, incc_fonte:dict) -> pd.DataFrame:
+        """le e salva na base os valores do INCC e a divisão do Valor/modeda pelo valor INCC
+
+        Args:
+            caminho (str): caminho de onde está o arquivo
+            incc_fonte (dict): dicionario com os valores INCC
+
+        Returns:
+            pd.DataFrame: DataFrame com a base já tratada
+        """
+        df:pd.DataFrame = pd.read_excel(caminho)
+        
+        incc:list = []
+        calculo_incc:list = []
+        for dados in df.values:
+            try:
+                valor_incc:float = incc_fonte[datetime.fromisoformat(str(dados[0])).replace(day=1)]
+                incc.append(valor_incc)
+                
+                calculo_incc.append(dados[3] / valor_incc)
+                
+            except:
+                incc.append(0.0)
+                calculo_incc.append(0.0)
+        
+        try:
+            del df['incc']
+        except KeyError:
+            pass
+        try:
+            del df['Valor_moeda objeto / incc']
+        except KeyError:
+            pass
+        
+        df['incc'] = pd.DataFrame(incc)
+        df['Valor_moeda objeto / incc'] = pd.DataFrame(calculo_incc)
+        
+        df.to_excel(caminho, index=False)
+        return  df   
+
+    def copiar_destino(self, destino:str) -> None:
+        """copia as planilhas para uma pasta no sharepoint
+
+        Args:
+            destino (str): caminho do destino
+        """
+        #pasta_destino = destino + self.__path_new_file.split("\\")[-1] + "\\"
+        pasta_destino:str = destino + "Incorridos\\"
+        
+        #import pdb; pdb.set_trace()
         
         if not os.path.exists(pasta_destino):
             os.makedirs(pasta_destino)
@@ -278,23 +331,26 @@ class Files():
         if len(os.listdir(self.__path_new_file)) == 0 :
             os.rmdir(self.__path_new_file)
         
-        destino_base = destino + "Bases\\"
+        destino_base:str = destino + "Bases\\"
         if not os.path.exists(destino_base):
             os.makedirs(destino_base)
         
-        destino_base_por_data =  f"{destino_base}\\{datetime.now().strftime('%d-%m-%Y')}"
+        destino_base_por_data:str =  f"{destino_base}\\{datetime.now().strftime('%d-%m-%Y')}"
         if not os.path.exists(destino_base_por_data):
             os.makedirs(destino_base_por_data)
             
         for file_base in os.listdir(self.tempPath):
             copy2(self.tempPath + file_base, destino_base_por_data)
             os.unlink(self.tempPath + file_base)
-        
+
         
 if __name__ == "__main__":
     """como usar
     """
     bot = Files()
-    print(f"\n\n{bot.gerar_arquivos()}")
-    print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
+    
+    print(bot.tratar_base(caminho='C:\\Users\\renan.oliveira\\.bot_ti\\CJI3\\A026.PO.xlsx', incc_fonte=bot.incc_valor()))
+    #print(f"\n\n{bot.gerar_arquivos()}")
+    #print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
     #print(f"\n\n{bot.incc_valor()}")
+    

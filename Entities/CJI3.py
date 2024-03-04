@@ -67,7 +67,7 @@ class CJI3:
                 os.rmdir(self.tempPath + file)
         
     
-    def conectar_sap(f):
+    def conectar_sap(f):# type: ignore
         """Decorador
 
         Args:
@@ -109,7 +109,7 @@ class CJI3:
                 session.findById("wnd[0]").sendVKey(0)
                     
                 kwargs["session"] = session
-                retorno = f(*args, **kwargs)
+                retorno = f(*args, **kwargs)# type: ignore
                 return retorno
             except TypeError:
                 raise TypeError("faltando o **Kargs na função principal")
