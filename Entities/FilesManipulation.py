@@ -51,7 +51,7 @@ class Files():
         if not os.path.exists(pasta):
             os.mkdir(pasta)
     
-    def _ler_arquivos(self) -> Dict[str, pd.DataFrame]:
+    def _ler_arquivos(self) -> Dict[str, str]:
         """le todos os arquivos na pasta selencionada separa apenas os excel e salva em um dict
 
         Returns:
