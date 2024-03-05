@@ -143,8 +143,11 @@ class Files():
             df = df[df['Elemento PEP'] != "POCRCIAI"]
             df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
             df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
+            df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENOS"]
             df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
             df = df[df['Denomin.da conta de contrapartida'] != "T. ESTOQUE INICIAL"]
+            df = df[df['Denomin.da conta de contrapartida'] != "T.  EST. TERRENOS"]
+            df = df[df['Denomin.da conta de contrapartida'] != "T. EST. TERRENOS"]
             
             #import pdb; pdb.set_trace()            
             app = xw.App(visible=False)
