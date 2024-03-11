@@ -1,4 +1,3 @@
-from numpy import object_
 import pandas as pd
 import os
 from time import sleep
@@ -43,9 +42,9 @@ def _find_element(browser:webdriver.Chrome, method, target:str, timeout=60):
         
 
 class Files():
-    def __init__(self, path="CJI3") -> None:
+    def __init__(self, date=datetime.now(), path="CJI3") -> None:
         self.tempPath: str = mountDefaultPath(path)
-        
+        self.date = date
         
         pasta = "incorridos_gerados"
         if not os.path.exists(pasta):
@@ -61,6 +60,9 @@ class Files():
         for file in os.listdir(self.tempPath):
             print(file)
             if file.endswith(".xlsx"):
+                for app_open in xw.apps:
+                    if app_open.books[0].name == file:
+                        app_open.kill()
                 fileName:str = file.replace(".xlsx", "").replace(".PO", "")
                 try:
                     caminho = self.tempPath + file
@@ -92,12 +94,16 @@ class Files():
         return round(valores, 2)
         
     @medir_tempo
-    def gerar_arquivos(self, path_new_file:str = f"incorridos_gerados\\Incorridos_{datetime.now().strftime('%d-%m-%Y')}") -> None:
+    def gerar_arquivos(self, path_new_file:str = "") -> None:
         r"""ira gerar as planilhas e alimentando com os dados calculados
 
         Args:
             path_new_file (str, optional): onde será salvo as planilhas. Defaults to f"C:\Users\{getuser()}\Downloads\Incorridos_{datetime.now().strftime('%d-%m-%Y')}".
         """
+        
+        if path_new_file == "":
+            path_new_file = f"incorridos_gerados\\Incorridos_{self.date.strftime('%d-%m-%Y')}"
+        
         infor_path_base:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\"
         infor_path:str = [(infor_path_base + x + '\\Informações de Obras.xlsx') for x in os.listdir(infor_path_base) if 'Base de Dados - Geral' in x][0]        
         infor = pd.read_excel(infor_path)
@@ -157,7 +163,7 @@ class Files():
                 
                 sheet_principal.range('E2').value = f"{name} - {temp_name}" #Nome
                 
-                sheet_principal.range('E3').value = datetime.now().strftime('%d/%m/%Y') #Data referencia
+                sheet_principal.range('E3').value = self.date.strftime('%d/%m/%Y') #Data referencia
                 
                 etapas:int = len(datas)
                 etapa:int = 1
@@ -338,7 +344,7 @@ class Files():
         if not os.path.exists(destino_base):
             os.makedirs(destino_base)
         
-        destino_base_por_data:str =  f"{destino_base}\\{datetime.now().strftime('%d-%m-%Y')}"
+        destino_base_por_data:str =  f"{destino_base}\\{self.date.strftime('%d-%m-%Y')}"
         if not os.path.exists(destino_base_por_data):
             os.makedirs(destino_base_por_data)
             

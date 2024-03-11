@@ -16,9 +16,12 @@ def erro_log():
 
 
 if __name__ == "__main__":
+    
+    date = datetime.now()
+    #date = datetime.strptime("11/03/2024", "%d/%m/%Y")
     try:
-        #pass
-        CJI3().gerarRelatorio()
+        pass
+        CJI3(date).gerarRelatorio()
         
     except Exception as error:
         print(traceback.format_exc())
@@ -27,9 +30,9 @@ if __name__ == "__main__":
         
     for _ in range(5):
         try:
-            bot = Files()
+            bot = Files(date)
             bot.gerar_arquivos()
-            bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\")
+            bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP999\\")
             break
         except Exception as error:
             print(traceback.format_exc())

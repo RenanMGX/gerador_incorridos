@@ -199,7 +199,7 @@ class CJI3:
                             except PermissionError:
                                 for _ in range(5):
                                     for x in xw.apps:
-                                        if empreendimento_for_save.upper() + ".xlsx" in x.books[0].name:
+                                        if (empreendimento_for_save.upper() + ".xlsx").upper() == (x.books[0].name).upper():
                                             x.kill()
                                             os.unlink(file)
                                     sleep(1)
@@ -211,9 +211,10 @@ class CJI3:
                         session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento_for_save.upper() + ".xlsx"
                         session.findById("wnd[1]/tbar[0]/btn[0]").press()
                         
+                        sleep(3)
                         for _ in range(5):
                             for x in xw.apps:
-                                if empreendimento_for_save.upper() + ".xlsx" in x.books[0].name:
+                                if (empreendimento_for_save.upper() + ".xlsx").upper() == (x.books[0].name).upper():
                                     x.kill()
                             sleep(1)
                             
