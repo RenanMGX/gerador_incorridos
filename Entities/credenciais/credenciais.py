@@ -1,35 +1,56 @@
-import os
 import json
+import os
+from copy import deepcopy
+import traceback
+from random import randint
 
-class Credenciais:
-    def __init__(self, path_file:str="Entities/credenciais/crd.json") -> None:
-        """metodo construtor da classe
+class Credential:
+    def __init__(self, path:str) -> None:
+        exten = ".json"
+        self.path = path+exten if not path.endswith(exten) else path
+        
+    def load(self) -> dict:
+        """crie / ler um arquivo json contendo as credenciais
 
         Args:
-            path_file (str, optional): endereço do arquivo json onde será salvo a senha. Defaults to "Entities/credenciais/crd.json".
-        """
-        self.path_file:str = path_file
-        if not os.path.exists(self.path_file):
-            with open(self.path_file, 'w')as _file:
-                json.dump({"user" : "user", "pass" : "pass", "key" : 0}, _file)
-    
-    def read(self) -> dict:
-        """le o arquivo json e descriptografa e salva em um dict para ser utilizado
+            path (str): caminho do arquivo que será salvo as crendicias
 
         Raises:
-            FileNotFoundError: caso não encontre o arquivo json
+            FileNotFoundError: caso o arquivo não exista irá criar um e vai alertar que foi criado e pedira para iniciar o script novamente
 
         Returns:
-            dict: dicionario com os dados para login
+            dict: dicionario com a credenciais salvas
         """
-        if os.path.exists(self.path_file):
-            with open(self.path_file, 'r')as _file:
-                dados:dict = json.load(_file)
-                dados['pass'] = self.decifrar(dados['pass'], dados['key'])
-                return dados
-        raise FileNotFoundError(f"arquivo .json não encontrado no caminho '{self.path_file}'")
+        
+        if not os.path.exists(self.path):
+            with open(self.path, 'w')as _file:
+                json.dump({"user": "", "password": "", "key": 0},_file)
+            raise FileNotFoundError(f"{self.path=} não existe! então foi criar uma no repositorio, edite as credenciais e execute o codigo novamente!")
+
+        with open(self.path, 'r')as _file:
+            result:dict = json.load(_file)
+        
+        new_result = deepcopy(result)
+        for key,value in new_result.items():
+            if key == 'key':
+                continue
+            new_result[key] = self.decifrar(value, new_result['key'])
+            
+        return new_result
+                            
     
-    def cifrar(self, text:str, key:int=1, response_json:bool=False) -> str:
+    def save(self, *, user:str, password:str) -> None:
+        key = randint(500,6000)
+        with open(self.path, 'w')as _file:
+            json.dump(
+                {
+                    'user':self.criar_cifra(user, key),
+                    'password':self.criar_cifra(password, key),
+                    'key': key
+                },
+                _file)
+    
+    def criar_cifra(self, text:str, key:int=1, response_json:bool=False) -> str:
         """criptografa a string informada orientada pela Key
 
         Args:
@@ -61,10 +82,9 @@ class Credenciais:
         Returns:
             str: texto descriptografado
         """
-        return self.cifrar(text, -key)
-
+        return self.criar_cifra(text, -key)
+        
 if __name__ == "__main__":
-    bot = Credenciais()
+    credential = Credential("imobme_credential.json")
     
-    print(bot.read())
-    
+    print(credential.load())

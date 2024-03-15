@@ -1,10 +1,14 @@
+import os
+import traceback
+
 from Entities.CJI3 import CJI3
 from Entities.FilesManipulation import Files
-import traceback
+from Entities.credenciais.credenciais import Credential # type: ignore
+from Entities.sharePointFolder import SharePointFolder # type: ignore
 from datetime import datetime
-import os
-from time import sleep
 from getpass import getuser
+#from time import sleep
+#from getpass import getuser
 
 def erro_log():
     path_log_error = "log_error"
@@ -16,25 +20,27 @@ def erro_log():
 
 
 if __name__ == "__main__":
+    date:datetime = datetime.now()
+    crd:dict = Credential("credencialSAP").load()
     
-    date = datetime.now()
-    #date = datetime.strptime("11/03/2024", "%d/%m/%Y")
+    gerar_relatorios:bool = True
+    manipular_relatorio:bool = True
+    
     try:
-        pass
-        CJI3(date).gerarRelatorio()
         
+        infor = SharePointFolder.infor_obras(path=f"C:/Users/renan.oliveira/PATRIMAR ENGENHARIA S A/Janela da Engenharia Controle de Obras - _Base de Dados - Geral/Informações de Obras.xlsx")
+        
+        if gerar_relatorios:
+            botSAP: CJI3 = CJI3(date=date)
+            botSAP.conectar(user=crd['user'], password=crd['password'])
+            botSAP.gerar_relatorios_SAP(lista=infor, gerar_quantos=1)
+        
+        if manipular_relatorio:
+            files_manipulation: Files = Files(date)
+            files_manipulation.gerar_incorridos(infor=infor)
+            files_manipulation.salvar_no_destino(destino=f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\")        
+    
+    
     except Exception as error:
         print(traceback.format_exc())
         erro_log()
-        sleep(1)
-        
-    for _ in range(5):
-        try:
-            bot = Files(date)
-            bot.gerar_arquivos()
-            bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP999\\")
-            break
-        except Exception as error:
-            print(traceback.format_exc())
-            erro_log()
-        sleep(1)

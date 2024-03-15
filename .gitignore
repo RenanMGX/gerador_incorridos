@@ -7,6 +7,8 @@
 *.vscode/
 *incorridos_gerados
 *db_connection.json
+*Bases
+*credencialSAP.json
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python

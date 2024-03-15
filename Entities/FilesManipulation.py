@@ -1,130 +1,61 @@
-import pandas as pd
 import os
-from time import sleep
-from CJI3 import mountDefaultPath # type: ignore
-from getpass import getuser
-from typing import List,Dict
-from datetime import datetime
-from shutil import copy2
-import xlwings as xw # type: ignore
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+import xlwings as xw
 import json
+import mysql.connector
+import pandas as pd
 
-def medir_tempo(f):
-    def wrap(*args, **kwargs):
-        agora: datetime = datetime.now()# type: ignore
-        result = f(*args, **kwargs)
-        print(f"\ntempo de execução: {datetime.now() - agora}\n")
-        return result
-    return wrap
 
-def _find_element(browser:webdriver.Chrome, method, target:str, timeout=60):
-    """auxiliador para o selenium ele tenta encontrar o objeto por alguns segundos ajustavel
-       caso encontre retorna o objeto caso não encontre ele vai gerar o erro mas só depois do tempo acabar
-
-    Args:
-        browser (webdriver.Chrome): objeto do chrome seria o navegador
-        method (object): qual methodo ira procurar
-        target (str): endereço que ira procurar
-        timeout (int, optional): tempo limite para tentar achar o objeto. Defaults to 60.
-
-    Returns:
-        webdriver.Chrome : se encontrar retorna o object do webdriver
-    """
-    for x in range(timeout):
-        try:
-            result = browser.find_element(method, target)
-            return result
-        except:
-            sleep(2)
-    raise Exception(f"'{target}' não foi encontrado")
-        
+from datetime import datetime
+from typing import Dict, List
+from shutil import copy2
+from time import sleep
 
 class Files():
-    def __init__(self, date=datetime.now(), path="CJI3") -> None:
-        self.tempPath: str = mountDefaultPath(path)
-        self.date = date
+    def __init__(self, date:datetime) -> None:
+        self.date:datetime = date
         
-        pasta = "incorridos_gerados"
-        if not os.path.exists(pasta):
-            os.mkdir(pasta)
+        self.__path_bases:str = os.getcwd() + "\\Bases\\"
+        if not os.path.exists(self.path_bases):
+            os.makedirs(self.path_bases)
+        self.__path_incorridos:str = os.getcwd() + "\\incorridos_gerados\\"
+        if not os.path.exists(self.path_incorridos):
+            os.makedirs(self.path_incorridos)
+            
+        self.__files_base = self._listar_arquivos()
+            
+    @property
+    def path_incorridos(self):
+        return self.__path_incorridos
     
-    def _ler_arquivos(self) -> Dict[str, str]:
-        """le todos os arquivos na pasta selencionada separa apenas os excel e salva em um dict
-
-        Returns:
-            Dict[str, pd.DataFrame]: nome do arquivo, objeto pd.Dataframe
-        """
-        dictionary: dict = {}
-        for file in os.listdir(self.tempPath):
-            print(file)
-            if file.endswith(".xlsx"):
-                for app_open in xw.apps:
-                    if app_open.books[0].name == file:
-                        app_open.kill()
-                fileName:str = file.replace(".xlsx", "").replace(".PO", "")
-                try:
-                    caminho = self.tempPath + file
-                    #df: pd.DataFrame = pd.read_excel(self.tempPath + file)
-                except:
-                    continue
-                dictionary[fileName] = caminho
-                #break
-        return dictionary
+    @path_incorridos.setter
+    def path_incorridos(self, value:str):
+        if not isinstance(value, str):
+            raise TypeError(f"o valor '{value}' atribuido para 'self.path_incorridos' não é uma string")
+        self.__path_incorridos = value
+        
+    @property
+    def path_bases(self):
+        return self.__path_bases
     
-    def calcular_pep_por_data(self, date:datetime, df:pd.DataFrame, termo:str) -> float:
-        """ira fazer os calculor dos valores
-
-        Args:
-            date (datetime): data do filtro
-            df (pd.DataFrame): o dataframe para ser filtrado
-            termo (str): qual é a coluna que será filtrada
-
-        Returns:
-            float: valor filtrado encontrado
-        """
-        df = df[(df['Data de lançamento'].dt.year == date.year) & (df['Data de lançamento'].dt.month == date.month)]
-        df = df[df['Elemento PEP'].str.contains(termo, case=False)]
-        
-        valores:float = 0
-        for valor in df['Valor/moeda objeto'].tolist():
-            valores += valor
-        
-        return round(valores, 2)
-        
-    @medir_tempo
-    def gerar_arquivos(self, path_new_file:str = "") -> None:
-        r"""ira gerar as planilhas e alimentando com os dados calculados
-
-        Args:
-            path_new_file (str, optional): onde será salvo as planilhas. Defaults to f"C:\Users\{getuser()}\Downloads\Incorridos_{datetime.now().strftime('%d-%m-%Y')}".
-        """
-        
-        if path_new_file == "":
-            path_new_file = f"incorridos_gerados\\Incorridos_{self.date.strftime('%d-%m-%Y')}"
-        
-        infor_path_base:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\"
-        infor_path:str = [(infor_path_base + x + '\\Informações de Obras.xlsx') for x in os.listdir(infor_path_base) if 'Base de Dados - Geral' in x][0]        
-        infor = pd.read_excel(infor_path)
-        
-        self.__path_new_file = path_new_file
-        self.incc: dict = self.incc_valor()
-        for name,caminho_arquivo in self._ler_arquivos().items():
-            #df = pd.read_excel(caminho_arquivo)
-            df = self.tratar_base(caminho=caminho_arquivo, incc_fonte=self.incc)
-
+    @path_bases.setter
+    def path_bases(self, value:str):
+        if not isinstance(value, str):
+            raise TypeError(f"o valor '{value}' atribuido para 'self.path_bases' não é uma string")
+        self.__path_bases = value
+    
+    @property
+    def files_base(self):
+        return self.__files_base
+    
+    def gerar_incorridos(self, *, infor:dict):
+        incc = self._incc_valor()
+        for name, file_path in self.__files_base.items():
+            df:pd.DataFrame = self._carregar_base(path=file_path, incc_fonte=incc)
             print(f"{name} -> Executando")
             
-            temp_name = infor[infor['Código da Obra'] == name[0:4]] # nome pesquisado pelo centro de custo
-            temp_name = temp_name['Nome da Obra'].values[0]
-            
-            path_file:str = self.__path_new_file + "\\" + (f"Incorrido - {name} - {temp_name} - R00.xlsx") # nome do arquivo
-            
-            if not os.path.exists(self.__path_new_file):
-                os.mkdir(self.__path_new_file)
-                
-            #df['Data de lançamento'] = pd.to_datetime(df['Data de lançamento'])
+            nome_empeendimento = infor['nomes'][name]
+            path_incorrido:str = self.path_incorridos + f"Incorrido - {name} - {nome_empeendimento}.xlsx"# nome do arquivo
+    
             datas:List[pd.Timestamp] = df['Data de lançamento'].unique().tolist()
             datas.pop(datas.index(pd.NaT))# type: ignore
             
@@ -133,35 +64,34 @@ class Files():
             datas = list(datas)
             datas = sorted(datas)
             datas.reverse()
-            
-            if os.path.exists(path_file):
+
+            if os.path.exists(path_incorrido):
                 try:
-                    os.unlink(path_file)
+                    os.unlink(path_incorrido)
                 except PermissionError:
-                    app = xw.Book(path_file)
-                    app.close()
-                    os.unlink(path_file)
+                    for open_file in xw.apps:
+                        if open_file.books[0].name == path_incorrido:
+                            open_file.kill()
+                            os.unlink(path_incorrido)
             
-            copy2("modelo planilha\\PEP a PEP - Incorridos - Modelo.xlsx", path_file)
+            for _ in range(5*60):
+                try:
+                    copy2("modelo planilha\\PEP a PEP - Incorridos - Modelo.xlsx", path_incorrido)
+                    break
+                except PermissionError:
+                    print(f"feche a planilha '{path_incorrido}'") 
+                sleep(1)
             
-            df = df.replace(float('nan'), "")
-            df = df[~df['Classe de custo'].astype(str).str.startswith('60')]
-            df = df[df['Elemento PEP'] != "POCRCIAI"]
-            df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
-            df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
-            df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENOS"]
-            df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
-            df = df[df['Denomin.da conta de contrapartida'] != "T. ESTOQUE INICIAL"]
-            df = df[df['Denomin.da conta de contrapartida'] != "T.  EST. TERRENOS"]
-            df = df[df['Denomin.da conta de contrapartida'] != "T. EST. TERRENOS"]
             
-            #import pdb; pdb.set_trace()            
+            
+            #pocrcito = df['Denominação de objeto'][df['Elemento PEP'].str.contains('POCRCITO', case=False)].unique().tolist()[0]
+            #import pdb; pdb.set_trace()
             app = xw.App(visible=False)
-            with app.books.open(path_file)as wb:
+            with app.books.open(path_incorrido)as wb:
                 sheet_principal = wb.sheets['PEP A PEP']
                 sheet_temp = wb.sheets['temp']
                 
-                sheet_principal.range('E2').value = f"{name} - {temp_name}" #Nome
+                sheet_principal.range('E2').value = f"{name} - {nome_empeendimento}" #Nome
                 
                 sheet_principal.range('E3').value = self.date.strftime('%d/%m/%Y') #Data referencia
                 
@@ -171,94 +101,168 @@ class Files():
                     agora = datetime.now()
                     print(f"{etapa} / {etapas} --> {date}")
                     
-                    formula_coluna_h = sheet_principal.range('H1:H120').formula
+                    formula_coluna_h = sheet_principal.range('H1:H130').formula
                     sheet_principal.range('N1').api.EntireColumn.Insert()
                     sheet_temp.range('A:A').copy()
-                    #sheet_principal.range('N1').select()
                     sheet_principal.range('N1').paste()
                     app.api.CutCopyMode = False
-                    
+                
                     sheet_principal.range('N6').value = date #data
                     
-                    sheet_principal.range('N11:N13').value = [[self.calcular_pep_por_data(date, df, "POCI")], [self.calcular_pep_por_data(date, df, "POCD")], [self.calcular_pep_por_data(date, df, "POSP")]]
+                    sheet_principal.range('N11:N13').value = [[self._calcular_pep_por_data(date, df, "POCI")], [self._calcular_pep_por_data(date, df, "POCD")], [self._calcular_pep_por_data(date, df, "POSP")]]
+                
+                    sheet_principal.range('N16:N23').value = [
+                                                        [self._calcular_pep_por_data(date, df, "POCRCIPJ")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCISP")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCIIP")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCIPR")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCIEQ")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCIMO")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCICO")],
+                                                        [self._calcular_pep_por_data(date, df, "POCRCITO")]                                                      
+                                                        ]
                     
-                    sheet_principal.range('N16:N22').value = [
-                                                        [self.calcular_pep_por_data(date, df, "POCRCIPJ")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCISP")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCIIP")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCIPR")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCIEQ")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCIMO")],
-                                                        [self.calcular_pep_por_data(date, df, "POCRCICO")]                                                       
-                                                        ]                    
-                    
-                    sheet_principal.range('N24:N53').value = [
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD01")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD02")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD03")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD04")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD05")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD06")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD07")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD08")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD09")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD10")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD11")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD12")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD13")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD14")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD15")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD16")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD17")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD18")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD19")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD20")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD21")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD22")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD23")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD24")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD25")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD26")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD27")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD28")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD29")],
-                                                            [self.calcular_pep_por_data(date, df, "POCRCD30")]
+                    # try:
+                    #     sheet_principal.range('E23').value = df['Denominação de objeto'][df['Elemento PEP'].str.contains('POCRCITO', case=False)].unique().tolist()[0]
+                    # except:
+                    #     pass
+
+                    sheet_principal.range('N25:N54').value = [
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD01")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD02")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD03")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD04")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD05")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD06")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD07")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD08")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD09")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD10")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD11")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD12")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD13")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD14")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD15")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD16")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD17")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD18")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD19")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD20")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD21")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD22")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD23")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD24")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD25")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD26")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD27")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD28")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD29")],
+                                                            [self._calcular_pep_por_data(date, df, "POCRCD30")]
                                                             ]
-                    #print(f"           tempo de execução: {datetime.now() - agora}")
-                    sheet_principal.range('N55').value = [[self.calcular_pep_por_data(date, df, "PONI")]]
+
+                    sheet_principal.range('N56').value = [[self._calcular_pep_por_data(date, df, "PONI")]]
                     
-                    sheet_principal.range('N57:N59').value = [[self.calcular_pep_por_data(date, df, "POPZKT")],
-                                                              [self.calcular_pep_por_data(date, df, "POPZOP")],
-                                                              [self.calcular_pep_por_data(date, df, "POPZMD")]
+                    sheet_principal.range('N58:N60').value = [[self._calcular_pep_por_data(date, df, "POPZKT")],
+                                                              [self._calcular_pep_por_data(date, df, "POPZOP")],
+                                                              [self._calcular_pep_por_data(date, df, "POPZMD")]
                                                                ] # ""
                     
-                    sheet_principal.range('N63').value = "Valor Mensal do INCC" if etapa == etapas else "" 
-                    
+                    sheet_principal.range('N64').value = "Valor Mensal do INCC" if etapa == etapas else "" 
+
                     try:
-                        sheet_principal.range('N64').value = self.incc[date.to_pydatetime()]
+                        sheet_principal.range('N65').value = incc[date.to_pydatetime()]
                     except:
-                        sheet_principal.range('N64').value = 0
+                        sheet_principal.range('N65').value = 0
                     
                     sheet_principal.range('H1:H120').formula = formula_coluna_h
                     etapa += 1
-                    #break
-                
+
                 wb.sheets['temp'].delete()
                 wb.save()
-            app.kill()    
-            #import pdb; pdb.set_trace()
+            app.kill()
+            for open_file in xw.apps:
+                if open_file.books[0].name == path_incorrido:
+                    open_file.kill()
+            print("        Finalizado!")
+
+    def salvar_no_destino(self, destino:str):
+        if not (destino.endswith("\\")) or (destino.endswith("/")):
+            destino += "\\"
+        
+        bases_path = destino + "Bases\\"
+        if not os.path.exists(bases_path):
+            os.makedirs(bases_path)
+        bases_path += self.date.strftime('%d-%m-%Y\\')
+        if not os.path.exists(bases_path):
+            os.makedirs(bases_path)
+            
+        for file in os.listdir(self.path_bases):
+            if file.endswith(".xlsx"):
+                copy2(self.path_bases+file, bases_path)
+        
+        incorridos_path = destino + "Incorridos\\"
+        if not os.path.exists(incorridos_path):
+            os.makedirs(incorridos_path)
+        
+        for file2 in os.listdir(self.path_incorridos):
+            if file2.endswith(".xlsx"):
+                copy2(self.path_incorridos+file2, incorridos_path)
+                
+    def _calcular_pep_por_data(self, date:datetime, df:pd.DataFrame, termo:str) -> float:
+        df = df[(df['Data de lançamento'].dt.year == date.year) & (df['Data de lançamento'].dt.month == date.month)]
+        df = df[df['Elemento PEP'].str.contains(termo, case=False)]
+        
+        return round(sum(df['Valor/moeda objeto'].tolist()), 2)
     
-    def incc_valor(self) -> dict:
-        """acessa o site da FGB para extrair o valor do INCC
-
-        Returns:
-            dict: data do indice, valor do indice
-        """
-
+    
+    def _carregar_base(self, *, path:str, incc_fonte:dict) -> pd.DataFrame:
+        df: pd.DataFrame = pd.read_excel(path)
+        
+        # adicionando INCC na base e salvando ela
+        incc:list = []
+        calculo_incc:list = []
+        for linha in df.values:
+            try:
+                valor_incc:float = incc_fonte[datetime.fromisoformat(str(linha[0])).replace(day=1)]
+                incc.append(valor_incc)
+                calculo_incc.append(linha[3] / valor_incc)
+            except:
+                incc.append(0.0)
+                calculo_incc.append(0.0)
+        try:
+            del df['incc']
+        except KeyError:
+            pass
+        try:
+            del df['Valor_moeda objeto / incc']
+        except KeyError:
+            pass
+        
+        for _ in range(5*60):
+            try:
+                df.to_excel(path, index=False)
+                break
+            except PermissionError:
+                print(f"feche a planilha '{path}'")
+            sleep(1)
+        
+        #Tratando Base antes de retornar na função
+        df = df.replace(float('nan'), "")
+        df = df[~df['Classe de custo'].astype(str).str.startswith('60')]
+        df = df[df['Elemento PEP'] != "POCRCIAI"]
+        df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
+        df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
+        df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENOS"]
+        df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
+        df = df[df['Denomin.da conta de contrapartida'] != "T. ESTOQUE INICIAL"]
+        df = df[df['Denomin.da conta de contrapartida'] != "T.  EST. TERRENOS"]
+        df = df[df['Denomin.da conta de contrapartida'] != "T. EST. TERRENOS"]
+        
+        return df
+    
+    def _incc_valor(self):
         with open("db_connection.json", 'r')as _file:
             db_config:dict = json.load(_file)
-        
-        import mysql.connector
         
         connection = mysql.connector.connect(
             host=db_config['host'],
@@ -276,89 +280,29 @@ class Files():
             date = datetime(year=indice[0].year, month=indice[0].month, day=indice[0].day)
             indices[date] = indice[1]
         
-        
         return indices   
-
-    def tratar_base(self, caminho:str, incc_fonte:dict) -> pd.DataFrame:
-        """le e salva na base os valores do INCC e a divisão do Valor/modeda pelo valor INCC
-
-        Args:
-            caminho (str): caminho de onde está o arquivo
-            incc_fonte (dict): dicionario com os valores INCC
-
-        Returns:
-            pd.DataFrame: DataFrame com a base já tratada
-        """
-        df:pd.DataFrame = pd.read_excel(caminho)
-        
-        incc:list = []
-        calculo_incc:list = []
-        for dados in df.values:
-            try:
-                valor_incc:float = incc_fonte[datetime.fromisoformat(str(dados[0])).replace(day=1)]
-                incc.append(valor_incc)
-                
-                calculo_incc.append(dados[3] / valor_incc)
-                
-            except:
-                incc.append(0.0)
-                calculo_incc.append(0.0)
-        
-        try:
-            del df['incc']
-        except KeyError:
-            pass
-        try:
-            del df['Valor_moeda objeto / incc']
-        except KeyError:
-            pass
-        
-        df['incc'] = pd.DataFrame(incc)
-        df['Valor_moeda objeto / incc'] = pd.DataFrame(calculo_incc)
-        
-        df.to_excel(caminho, index=False)
-        return  df   
-
-    def copiar_destino(self, destino:str) -> None:
-        """copia as planilhas para uma pasta no sharepoint
-
-        Args:
-            destino (str): caminho do destino
-        """
-        #pasta_destino = destino + self.__path_new_file.split("\\")[-1] + "\\"
-        pasta_destino:str = destino + "Incorridos\\"
-        
-        #import pdb; pdb.set_trace()
-        
-        if not os.path.exists(pasta_destino):
-            os.makedirs(pasta_destino)
-        
-        for file in os.listdir(self.__path_new_file):
-            file_path = self.__path_new_file + "\\" + file
-            copy2(file_path, pasta_destino)
-            os.unlink(file_path)
-        if len(os.listdir(self.__path_new_file)) == 0 :
-            os.rmdir(self.__path_new_file)
-        
-        destino_base:str = destino + "Bases\\"
-        if not os.path.exists(destino_base):
-            os.makedirs(destino_base)
-        
-        destino_base_por_data:str =  f"{destino_base}\\{self.date.strftime('%d-%m-%Y')}"
-        if not os.path.exists(destino_base_por_data):
-            os.makedirs(destino_base_por_data)
-            
-        for file_base in os.listdir(self.tempPath):
-            copy2(self.tempPath + file_base, destino_base_por_data)
-            os.unlink(self.tempPath + file_base)
-
-        
-if __name__ == "__main__":
-    """como usar
-    """
-    bot = Files()
     
-    print(bot.tratar_base(caminho='C:\\Users\\renan.oliveira\\.bot_ti\\CJI3\\A026.PO.xlsx', incc_fonte=bot.incc_valor()))
+    def _listar_arquivos(self) -> Dict[str,str]:
+            
+        lista:dict = {}
+        for file in os.listdir(self.path_bases):
+            new_file = file.replace(".XLSX",".xlsx")
+            os.rename((self.path_bases + file),(self.path_bases + new_file))
+            file = new_file
+            if file.lower().endswith(".xlsx"):
+                for file_open in xw.apps:
+                    if file_open.books[0].name.lower() == file.lower():
+                        file_open.kill()
+            else:
+                continue
+            file_name:str = file[0:4]
+            lista[file_name] = self.path_bases + file
+        return lista
+            
+                
+    
+if __name__ == "__main__":
+    pass
     #print(f"\n\n{bot.gerar_arquivos()}")
     #print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
     #print(f"\n\n{bot.incc_valor()}")

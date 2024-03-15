@@ -1,251 +1,192 @@
-import win32com.client
-from datetime import datetime
-import pandas as pd
-import xlwings as xw # type: ignore
-from time import sleep
 import os
-from getpass import getuser
-import traceback
-import subprocess
-import json
 import psutil
-from credenciais.credenciais import Credenciais # type: ignore
+import subprocess
+import win32com.client
+import xlwings as xw
 
-
-speak:bool=False
-
-dados_credenciais = Credenciais().read()
-
-def add_bar(path: str) -> str:
-    """adiciona barra no final da string
-
-    Args:
-        path (str): caminho
-
-    Returns:
-        str: caminho com as barras adicionadas
-    """
-    if path[-1] != "\\":
-        path += "\\"
-    return path
-
-def mountDefaultPath(path: str) -> str:
-    """cria uma pasta padrao no perfil do usuario para controle do script
-
-    Args:
-        path (str): pasta que vai ser criada
-
-    Returns:
-        str: caminho completo com a pasta criada
-    """
-    tempPath: str = add_bar(f"C:\\Users\\{getuser()}\\.bot_ti\\")
-    if not os.path.exists(tempPath):
-        os.mkdir(tempPath)
-    tempPath += add_bar(path)
-    if not os.path.exists(tempPath):
-        os.mkdir(tempPath)
-    return tempPath
-
+from datetime import datetime
+from time import sleep
+from credenciais.credenciais import Credential # type: ignore
 
 class CJI3:
-    def __init__(self, date:datetime=datetime.now(), path:str="CJI3") -> None:
-        """methodo construtor da classe
-
-        Args:
-            date (datetime, optional): data para operar o script. Defaults to datetime.now().
-            path (str, optional): nome da pasta onde os arquivos serão salvos. Defaults to "CJI3".
-        """
-        self.date: datetime = date
-        self.dateSTR: str = self.date.strftime("%d.%m.%Y")
-        self.initialDate: str = "01.01.2000"
+    def __init__(self, *, date:datetime) -> None:
+        if not isinstance(date, datetime):
+            raise TypeError("apenas datetime na instancia 'date'")
         
-        self.tempPath: str = mountDefaultPath(path)
-        for file in os.listdir(self.tempPath):
-            try:
-                os.unlink(self.tempPath + file)
-            except PermissionError:
-                os.rmdir(self.tempPath + file)
+        self.__date: datetime = date
+        self.__dateSTR:str = self.date.strftime("%d.%m.%Y")
+        self.__initialDate:str = "01.01.2000"
         
+        self.__bases_path:str = os.getcwd() + "\\Bases\\"
+        if not os.path.exists(self.bases_path):
+            os.makedirs(self.bases_path)
     
-    def conectar_sap(f):# type: ignore
-        """Decorador
-
-        Args:
-            f (_type_): função que será decorada
-        """
-        def verificar_sap_aberto() -> bool:
-            """verifica se o programa SAP está aberto
-
-            Returns:
-                bool: retorna True se o programa está aberto
-            """
-            for process in psutil.process_iter(['name']):
-                if "saplogon" in process.name().lower():
-                    return True
-            return False
-        def wrap(*args, **kwargs):
-            """função que aplica a decoração
-
-            Raises:
-                TypeError: se o Kargs estiver faltando
-                Exception: não conseguiu se conectar ao SAP
-
-            Returns:
-                _type_: retorna a propria função decorada
-            """
-            try:
-                if not verificar_sap_aberto():
-
-                    path_sap = r"C:\Program Files (x86)\SAP\FrontEnd\SapGui\saplogon.exe"
-                    subprocess.Popen(path_sap)
-                    sleep(5)
-                    
-                SapGuiAuto: win32com.client.CDispatch = win32com.client.GetObject("SAPGUI")# type: ignore
-                application: win32com.client.CDispatch = SapGuiAuto.GetScriptingEngine# type: ignore
-                connection = application.OpenConnection("S4P", True) # type: ignore
-                session: win32com.client.CDispatch = connection.Children(0)# type: ignore
-                session.findById("wnd[0]/usr/txtRSYST-BNAME").text = dados_credenciais["user"] # Usuario
-                session.findById("wnd[0]/usr/pwdRSYST-BCODE").text = dados_credenciais["pass"] # Senha
-                session.findById("wnd[0]").sendVKey(0)
-                    
-                kwargs["session"] = session
-                retorno = f(*args, **kwargs)# type: ignore
-                return retorno
-            except TypeError:
-                raise TypeError("faltando o **Kargs na função principal")
-            except Exception as error:
-                raise Exception(f"não foi possivel conectar ao sap --> {type(error).__class__} -> {error}")
-        return wrap
+    @property
+    def date(self):
+        return self.__date
     
-    def _listar_empreendimentos(self) -> list:
-        """gera uma lista dos empreendimentos que serão carregados
+    @property
+    def dateSTR(self):
+        return self.__dateSTR
 
-        Raises:
-            FileExistsError: caso não encontre o arquivo
-
-        Returns:
-            list: lista com os arquivos encontrador
-        """
-        path_base:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\"
-        path:str = [(path_base + x + '\\Informações de Obras.xlsx') for x in os.listdir(path_base) if 'Base de Dados - Geral' in x][0]        
-        
-        if os.path.exists(path):
-            self.df = pd.read_excel(path)
-            df = self.df['Código da Obra']
-            return df.unique().tolist()
-        raise FileExistsError(f"arquivo não encontrado -> {path}")
+    @property
+    def initialDate(self):
+        return self.__initialDate
     
-    @conectar_sap  # type: ignore  
-    def gerarRelatorio(self, *args, **kwargs) -> None:
-        """gera os relatorios que serão salvas no caminho self.tempPath
-
-        Raises:
-            Exception: erro na execução de gerar relatorios
-            FileNotFoundError: Não foi selecionado nenhum objeto com os critérios de seleção indicados.
-        """
-        agora:datetime = datetime.now()
-        session: win32com.client.CDispatch = kwargs["session"]
-        
+    @property
+    def bases_path(self):
+        return self.__bases_path
+    
+    @bases_path.setter
+    def bases_path(self, value:str):
+        if not isinstance(value, str):
+            raise TypeError(f"o valor '{value}' atribuido para 'self.bases_path' não é uma string")
+        self.__bases_path = value
+    
+    @property
+    def session(self):
+        return self.__session
+    
+            
+    def conectar(self, *, user, password) -> bool:
         try:
-            relatorios:list = [".po"]
-            for empre in self._listar_empreendimentos():
-                for relatorio in relatorios:
-                    
-                    
-                    empreendimento = empre + relatorio
-                    print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')} {empreendimento} -> Iniciado")
+            if not self._verificar_sap_aberto():
+                subprocess.Popen(r"C:\Program Files (x86)\SAP\FrontEnd\SapGui\saplogon.exe")
+                sleep(5)
+            
+            SapGuiAuto: win32com.client.CDispatch = win32com.client.GetObject("SAPGUI")# type: ignore
+            application: win32com.client.CDispatch = SapGuiAuto.GetScriptingEngine# type: ignore
+            connection = application.OpenConnection("S4P", True) # type: ignore
+            self.__session: win32com.client.CDispatch = connection.Children(0)# type: ignore
+            
+            self.session.findById("wnd[0]/usr/txtRSYST-BNAME").text = user # Usuario
+            self.session.findById("wnd[0]/usr/pwdRSYST-BCODE").text = password # Senha
+            self.session.findById("wnd[0]").sendVKey(0)
+            
+            return True
+        
+        except Exception as error:
+            raise ConnectionError(f"não foi possivel se conectar ao SAP motivo: {type(error).__class__} -> {error}")
+    
+    def gerar_relatorios_SAP(self, *, lista:dict, peps:list=[".po"], gerar_quantos:int=987654321) -> None:
+        contador_gerados = 1
+        if not isinstance(peps, list):
+            raise TypeError("apenas listas")
+        try:
+            lista_executar = lista['executar']
+        except KeyError:
+            raise KeyError("chave 'executar' não foi encontrada")
+        
+        agora:datetime = datetime.now()
+
+        try:
+            for centro_custo in lista_executar:
+                for pep in peps:
+                    codigo_empreendimento:str = centro_custo + pep
+                    print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')} {codigo_empreendimento} -> Iniciado")
                     try:
                         #executando CJI3
-                        #session.findById("wnd[0]").maximize()
-                        session.findById("wnd[0]/tbar[0]/okcd").text = ""
-                        session.findById("wnd[0]/tbar[0]/okcd").text = "/nCJI3"
-                        session.findById("wnd[0]").sendVKey(0)
+                        self.session.findById("wnd[0]/tbar[0]/okcd").text = ""
+                        self.session.findById("wnd[0]/tbar[0]/okcd").text = "/nCJI3"
+                        self.session.findById("wnd[0]").sendVKey(0)
+                        #import pdb;pdb.set_trace()
                         try:
-                            if not "Seleções gestão projetos (Outro perfil BD: ZPS000000001)" in session.findById("/app/con[0]/ses[0]/wnd[0]/usr/boxSEL_TEXT").Text:
+                            if not "Seleções gestão projetos (Outro perfil BD: ZPS000000001)" in self.session.findById("/app/con[0]/ses[0]/wnd[0]/usr/boxSEL_TEXT").Text:
                                 raise Exception()
                         except:
-                            session.findById("wnd[0]").sendVKey(4)
-                            session.findById("wnd[2]/usr/lbl[6,19]").setFocus()
-                            session.findById("wnd[2]").sendVKey(2)
-                            session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                            session.findById("wnd[1]").sendVKey(4)
-                            session.findById("wnd[2]/usr/lbl[14,14]").setFocus()
-                            session.findById("wnd[2]").sendVKey(2)
-                            session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                        
+                            try:
+                                self.session.findById("wnd[1]/usr/sub:SAPLSPO4:0300")
+                                self.session.findById("wnd[0]").sendVKey(4)
+                                self.session.findById("wnd[2]/usr/lbl[6,19]").setFocus()
+                                self.session.findById("wnd[2]").sendVKey(2)
+                                self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                                self.session.findById("wnd[1]").sendVKey(4)
+                                self.session.findById("wnd[2]/usr/lbl[14,14]").setFocus()
+                                self.session.findById("wnd[2]").sendVKey(2)
+                                self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                            except:
+                                pass
+
                         #ronda de empresas
-                        session.findById("wnd[0]/usr/ctxtCN_PSPNR-LOW").text = empreendimento # empreendimento
-                        session.findById("wnd[0]/usr/ctxtR_BUDAT-LOW").text = self.initialDate
-                        session.findById("wnd[0]/usr/ctxtR_BUDAT-HIGH").text = self.dateSTR
-                        session.findById("wnd[0]/usr/ctxtP_DISVAR").text = "/FABRICIO"
-                        session.findById("wnd[0]/usr/btnBUT1").press()
-                        session.findById("wnd[1]/usr/txtKAEP_SETT-MAXSEL").text = "999999999" # valor 999999999
-                        session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                        session.findById("wnd[0]/tbar[1]/btn[8]").press()
+                        self.session.findById("wnd[0]/usr/ctxtCN_PSPNR-LOW").text = codigo_empreendimento # empreendimento
+                        self.session.findById("wnd[0]/usr/ctxtR_BUDAT-LOW").text = self.initialDate
+                        self.session.findById("wnd[0]/usr/ctxtR_BUDAT-HIGH").text = self.dateSTR
+                        self.session.findById("wnd[0]/usr/ctxtP_DISVAR").text = "/FABRICIO"
+                        self.session.findById("wnd[0]/usr/btnBUT1").press()
+                        self.session.findById("wnd[1]/usr/txtKAEP_SETT-MAXSEL").text = "999999999" # valor 999999999
+                        self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                        self.session.findById("wnd[0]/tbar[1]/btn[8]").press()
                         
-                        if session.findById("wnd[0]/sbar").text == "Não foi selecionado nenhum objeto com os critérios de seleção indicados.":
+                        if self.session.findById("wnd[0]/sbar").text == "Não foi selecionado nenhum objeto com os critérios de seleção indicados.":
                             raise FileNotFoundError("Não foi selecionado nenhum objeto com os critérios de seleção indicados.")
+
+                        lista["nomes"][centro_custo]
+                        empreendimento_for_save:str = f"{centro_custo} - {lista['nomes'][centro_custo]} - {datetime.now().strftime('%d-%m-%Y')}.xlsx".upper()
+
+                        file:str = self.bases_path + empreendimento_for_save
                         
-                        temp_name = self.df[self.df['Código da Obra'] == empre] # nome pesquisado pelo centro de custo
-                        temp_name = temp_name['Nome da Obra'].values[0]
-                        empreendimento_for_save:str = f"{empre} - {temp_name} - {datetime.now().strftime('%d-%m-%Y')}"
-                        #import pdb; pdb.set_trace()
-                        
-                        #salvando Relatorio
-                        file:str = self.tempPath + empreendimento_for_save.upper() + ".xlsx"
+                        #print(file)
                         if os.path.exists(file):
+                            
                             try:
                                 os.unlink(file)
                             except PermissionError:
-                                for _ in range(5):
-                                    for x in xw.apps:
-                                        if (empreendimento_for_save.upper() + ".xlsx").upper() == (x.books[0].name).upper():
-                                            x.kill()
+                                for _ in range(7):
+                                    for open_file in xw.apps:
+                                        if empreendimento_for_save.lower() == open_file.books[0].name.lower():
+                                            open_file.kill()
                                             os.unlink(file)
+                                            break
                                     sleep(1)
-                                                        
+                                    
                         sleep(1)
-                        session.findById("wnd[0]").sendVKey(43)
-                        session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                        session.findById("wnd[1]/usr/ctxtDY_PATH").text = self.tempPath
-                        session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento_for_save.upper() + ".xlsx"
-                        session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                        self.session.findById("wnd[0]").sendVKey(43)
+                        self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                        self.session.findById("wnd[1]/usr/ctxtDY_PATH").text = self.bases_path
+                        self.session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento_for_save
+                        self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
                         
                         sleep(3)
                         for _ in range(5):
-                            for x in xw.apps:
-                                if (empreendimento_for_save.upper() + ".xlsx").upper() == (x.books[0].name).upper():
-                                    x.kill()
+                            for open_file2 in xw.apps:
+                                #print(f"{empreendimento_for_save.lower()=} | {open_file2.books[0].name.lower()=} | {empreendimento_for_save.lower() == open_file2.books[0].name.lower()=}")
+                                if empreendimento_for_save.lower() == open_file2.books[0].name.lower():
+                                    open_file2.kill()
                             sleep(1)
-                            
-                        print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")
+                        print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")            
                     except Exception as error:
                         print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
                         continue
-                #break            
+                
+                if contador_gerados < gerar_quantos:
+                    contador_gerados += 1
+                else:
+                    break
+                #break
             tempo:str = f"tempo de execução: {datetime.now() - agora}"
-            print(tempo) if speak else None
-            with open("temp.txt", "w")as _file:
-                _file.write(tempo)   
+            print(tempo)
+            # with open("temp.txt", "w")as _file:
+            #     _file.write(tempo)   
         
         finally:
             sleep(1)
-            session.findById("wnd[0]").close()
+            self.session.findById("wnd[0]").close()
             sleep(1)
-            session.findById('wnd[1]/usr/btnSPOP-OPTION1').press()
+            self.session.findById('wnd[1]/usr/btnSPOP-OPTION1').press()
+        
+        
+        
+    def _verificar_sap_aberto(self) -> bool:
+        for process in psutil.process_iter(['name']):
+            if "saplogon" in process.name().lower():
+                return True
+        return False    
+        
 
 if __name__ == "__main__":
-    """como usar
-    """
-    speak=True
-    try:
-        bot: CJI3 = CJI3()
-        #print(bot.gerarRelatorio())
-    except Exception:
-        error = traceback.format_exc()
-        print(error) if speak else None
-        with open("temp.txt", "w")as _file:
-            _file.write(error)               
-    #input()
-    #print(bot.tempPath)
+    date: datetime = datetime.now()
     
+    crd = Credential("credencialSAP").load()
+    
+    bot = CJI3(date=date)
+    bot.conectar(user=crd['user'], password=crd['password'])
