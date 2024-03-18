@@ -82,77 +82,81 @@ class CJI3:
                 for pep in peps:
                     codigo_empreendimento:str = centro_custo + pep
                     print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')} {codigo_empreendimento} -> Iniciado")
-                    try:
-                        #executando CJI3
-                        self.session.findById("wnd[0]/tbar[0]/okcd").text = ""
-                        self.session.findById("wnd[0]/tbar[0]/okcd").text = "/nCJI3"
-                        self.session.findById("wnd[0]").sendVKey(0)
-                        #import pdb;pdb.set_trace()
+                    for _ in range(5):
                         try:
-                            if not "Seleções gestão projetos (Outro perfil BD: ZPS000000001)" in self.session.findById("/app/con[0]/ses[0]/wnd[0]/usr/boxSEL_TEXT").Text:
-                                raise Exception()
-                        except:
+                            #executando CJI3
+                            self.session.findById("wnd[0]/tbar[0]/okcd").text = ""
+                            self.session.findById("wnd[0]/tbar[0]/okcd").text = "/nCJI3"
+                            self.session.findById("wnd[0]").sendVKey(0)
+                            #import pdb;pdb.set_trace()
                             try:
-                                self.session.findById("wnd[1]/usr/sub:SAPLSPO4:0300")
-                                self.session.findById("wnd[0]").sendVKey(4)
-                                self.session.findById("wnd[2]/usr/lbl[6,19]").setFocus()
-                                self.session.findById("wnd[2]").sendVKey(2)
-                                self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                                self.session.findById("wnd[1]").sendVKey(4)
-                                self.session.findById("wnd[2]/usr/lbl[14,14]").setFocus()
-                                self.session.findById("wnd[2]").sendVKey(2)
-                                self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                                if not "Seleções gestão projetos (Outro perfil BD: ZPS000000001)" in self.session.findById("/app/con[0]/ses[0]/wnd[0]/usr/boxSEL_TEXT").Text:
+                                    raise Exception()
                             except:
-                                pass
+                                try:
+                                    self.session.findById("wnd[1]/usr/sub:SAPLSPO4:0300")
+                                    self.session.findById("wnd[0]").sendVKey(4)
+                                    self.session.findById("wnd[2]/usr/lbl[6,19]").setFocus()
+                                    self.session.findById("wnd[2]").sendVKey(2)
+                                    self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                                    self.session.findById("wnd[1]").sendVKey(4)
+                                    self.session.findById("wnd[2]/usr/lbl[14,14]").setFocus()
+                                    self.session.findById("wnd[2]").sendVKey(2)
+                                    self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                                except:
+                                    pass
 
-                        #ronda de empresas
-                        self.session.findById("wnd[0]/usr/ctxtCN_PSPNR-LOW").text = codigo_empreendimento # empreendimento
-                        self.session.findById("wnd[0]/usr/ctxtR_BUDAT-LOW").text = self.initialDate
-                        self.session.findById("wnd[0]/usr/ctxtR_BUDAT-HIGH").text = self.dateSTR
-                        self.session.findById("wnd[0]/usr/ctxtP_DISVAR").text = "/FABRICIO"
-                        self.session.findById("wnd[0]/usr/btnBUT1").press()
-                        self.session.findById("wnd[1]/usr/txtKAEP_SETT-MAXSEL").text = "999999999" # valor 999999999
-                        self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                        self.session.findById("wnd[0]/tbar[1]/btn[8]").press()
-                        
-                        if self.session.findById("wnd[0]/sbar").text == "Não foi selecionado nenhum objeto com os critérios de seleção indicados.":
-                            raise FileNotFoundError("Não foi selecionado nenhum objeto com os critérios de seleção indicados.")
-
-                        lista["nomes"][centro_custo]
-                        empreendimento_for_save:str = f"{centro_custo} - {lista['nomes'][centro_custo]} - {datetime.now().strftime('%d-%m-%Y')}.xlsx".upper()
-
-                        file:str = self.bases_path + empreendimento_for_save
-                        
-                        #print(file)
-                        if os.path.exists(file):
+                            #ronda de empresas
+                            self.session.findById("wnd[0]/usr/ctxtCN_PSPNR-LOW").text = codigo_empreendimento # empreendimento
+                            self.session.findById("wnd[0]/usr/ctxtR_BUDAT-LOW").text = self.initialDate
+                            self.session.findById("wnd[0]/usr/ctxtR_BUDAT-HIGH").text = self.dateSTR
+                            self.session.findById("wnd[0]/usr/ctxtP_DISVAR").text = "/FABRICIO"
+                            self.session.findById("wnd[0]/usr/btnBUT1").press()
+                            self.session.findById("wnd[1]/usr/txtKAEP_SETT-MAXSEL").text = "999999999" # valor 999999999
+                            self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                            self.session.findById("wnd[0]/tbar[1]/btn[8]").press()
                             
-                            try:
-                                os.unlink(file)
-                            except PermissionError:
-                                if self._fechar_excel(file_name=empreendimento_for_save):
-                                    os.unlink(file)                              
-                                    
-                        sleep(1)
-                        self.session.findById("wnd[0]").sendVKey(43)
-                        self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                        self.session.findById("wnd[1]/usr/ctxtDY_PATH").text = self.bases_path
-                        self.session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento_for_save
-                        self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
-                        
-                        sleep(3)
-                        
-                        self._fechar_excel(file_name=empreendimento_for_save)
-                        
-                        print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")            
-                    except Exception as error:
-                        print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
-                        continue
+                            if self.session.findById("wnd[0]/sbar").text == "Não foi selecionado nenhum objeto com os critérios de seleção indicados.":
+                                raise FileNotFoundError("Não foi selecionado nenhum objeto com os critérios de seleção indicados.")
+
+                            lista["nomes"][centro_custo]
+                            empreendimento_for_save:str = f"{centro_custo} - {lista['nomes'][centro_custo]} - {datetime.now().strftime('%d-%m-%Y')}.xlsx".upper()
+
+                            file:str = self.bases_path + empreendimento_for_save
+                            
+                            #print(file)
+                            if os.path.exists(file):
+                                
+                                try:
+                                    os.unlink(file)
+                                except PermissionError:
+                                    if self._fechar_excel(file_name=empreendimento_for_save):
+                                        os.unlink(file)                              
+                                        
+                            sleep(1)
+                            self.session.findById("wnd[0]").sendVKey(43)
+                            self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                            self.session.findById("wnd[1]/usr/ctxtDY_PATH").text = self.bases_path
+                            self.session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = empreendimento_for_save
+                            self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                            
+                            sleep(3)
+                            
+                            self._fechar_excel(file_name=empreendimento_for_save)
+                            
+                            print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")  
+                            break          
+                        except Exception as error:
+                            print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
+                            continue
                 
                 if contador_gerados < gerar_quantos:
                     contador_gerados += 1
                 else:
                     break
                 #break
+                
+                
             tempo:str = f"tempo de execução: {datetime.now() - agora}"
             print(tempo)
             # with open("temp.txt", "w")as _file:
