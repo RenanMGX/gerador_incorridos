@@ -33,7 +33,7 @@ if __name__ == "__main__":
         if gerar_relatorios:
             botSAP: CJI3 = CJI3(date=date)
             botSAP.conectar(user=crd['user'], password=crd['password'])
-            botSAP.gerar_relatorios_SAP(lista=infor, gerar_quantos=1)
+            botSAP.gerar_relatorios_SAP(lista=infor)
         
         if manipular_relatorio:
             files_manipulation: Files = Files(date)
