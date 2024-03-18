@@ -129,13 +129,8 @@ class CJI3:
                             try:
                                 os.unlink(file)
                             except PermissionError:
-                                for _ in range(7):
-                                    for open_file in xw.apps:
-                                        if empreendimento_for_save.lower() == open_file.books[0].name.lower():
-                                            open_file.kill()
-                                            os.unlink(file)
-                                            break
-                                    sleep(1)
+                                if self._fechar_excel(file_name=empreendimento_for_save):
+                                    os.unlink(file)                              
                                     
                         sleep(1)
                         self.session.findById("wnd[0]").sendVKey(43)
@@ -145,12 +140,9 @@ class CJI3:
                         self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
                         
                         sleep(3)
-                        for _ in range(5):
-                            for open_file2 in xw.apps:
-                                #print(f"{empreendimento_for_save.lower()=} | {open_file2.books[0].name.lower()=} | {empreendimento_for_save.lower() == open_file2.books[0].name.lower()=}")
-                                if empreendimento_for_save.lower() == open_file2.books[0].name.lower():
-                                    open_file2.kill()
-                            sleep(1)
+                        
+                        self._fechar_excel(file_name=empreendimento_for_save)
+                        
                         print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")            
                     except Exception as error:
                         print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
@@ -172,8 +164,22 @@ class CJI3:
                 self.session.findById("wnd[0]").close()
                 sleep(1)
                 self.session.findById('wnd[1]/usr/btnSPOP-OPTION1').press()
-            except Exception as Error:
+            except Exception as error:
                 print(f"não foi possivel fechar o SAP {type(error)} | {error}")
+    
+    
+    def _fechar_excel(self, *, file_name:str, timeout=15) -> bool:
+        for _ in range(timeout):
+            for app in xw.apps:
+                for open_file in app.books:
+                    if file_name.lower() == open_file.name.lower():
+                        open_file.close()
+                        if len(xw.apps) <= 0:
+                            app.kill()
+                        return True
+            sleep(1)
+        return False
+     
         
     def _verificar_sap_aberto(self) -> bool:
         for process in psutil.process_iter(['name']):
