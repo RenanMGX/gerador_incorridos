@@ -46,7 +46,6 @@ class CJI3:
     @property
     def session(self):
         return self.__session
-    
             
     def conectar(self, *, user, password) -> bool:
         try:
@@ -64,7 +63,6 @@ class CJI3:
             self.session.findById("wnd[0]").sendVKey(0)
             
             return True
-        
         except Exception as error:
             raise ConnectionError(f"não foi possivel se conectar ao SAP motivo: {type(error).__class__} -> {error}")
     
@@ -169,19 +167,19 @@ class CJI3:
             #     _file.write(tempo)   
         
         finally:
-            sleep(1)
-            self.session.findById("wnd[0]").close()
-            sleep(1)
-            self.session.findById('wnd[1]/usr/btnSPOP-OPTION1').press()
-        
-        
+            try:
+                sleep(1)
+                self.session.findById("wnd[0]").close()
+                sleep(1)
+                self.session.findById('wnd[1]/usr/btnSPOP-OPTION1').press()
+            except Exception as Error:
+                print(f"não foi possivel fechar o SAP {type(error)} | {error}")
         
     def _verificar_sap_aberto(self) -> bool:
         for process in psutil.process_iter(['name']):
             if "saplogon" in process.name().lower():
                 return True
         return False    
-        
 
 if __name__ == "__main__":
     date: datetime = datetime.now()

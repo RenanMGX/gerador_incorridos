@@ -4,7 +4,6 @@ import json
 import mysql.connector
 import pandas as pd
 
-
 from datetime import datetime
 from typing import Dict, List
 from shutil import copy2
@@ -81,8 +80,6 @@ class Files():
                 except PermissionError:
                     print(f"feche a planilha '{path_incorrido}'") 
                 sleep(1)
-            
-            
             
             #pocrcito = df['Denominação de objeto'][df['Elemento PEP'].str.contains('POCRCITO', case=False)].unique().tolist()[0]
             #import pdb; pdb.set_trace()
@@ -214,7 +211,6 @@ class Files():
         
         return round(sum(df['Valor/moeda objeto'].tolist()), 2)
     
-    
     def _carregar_base(self, *, path:str, incc_fonte:dict) -> pd.DataFrame:
         df: pd.DataFrame = pd.read_excel(path)
         
@@ -298,8 +294,6 @@ class Files():
             file_name:str = file[0:4]
             lista[file_name] = self.path_bases + file
         return lista
-            
-                
     
 if __name__ == "__main__":
     pass
