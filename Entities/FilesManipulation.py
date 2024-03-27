@@ -78,10 +78,8 @@ class Files():
                 try:
                     os.unlink(path_incorrido)
                 except PermissionError:
-                    for open_file in xw.apps:
-                        if open_file.books[0].name == path_incorrido:
-                            open_file.kill()
-                            os.unlink(path_incorrido)
+                    self._fechar_excel(file_name=path_incorrido)
+                    os.unlink(path_incorrido)
             
             for _ in range(5*60):
                 try:
@@ -187,9 +185,7 @@ class Files():
                 wb.sheets['temp'].delete()
                 wb.save()
             app.kill()
-            for open_file in xw.apps:
-                if open_file.books[0].name == path_incorrido:
-                    open_file.kill()
+            self._fechar_excel(file_name=path_incorrido)
             print("        Finalizado!")
 
     def salvar_no_destino(self, destino:str):
@@ -293,17 +289,26 @@ class Files():
         lista:dict = {}
         for file in os.listdir(self.path_bases):
             new_file = file.replace(".XLSX",".xlsx")
+
+            self._fechar_excel(file_name=new_file)
             os.rename((self.path_bases + file),(self.path_bases + new_file))
+                        
             file = new_file
-            if file.lower().endswith(".xlsx"):
-                for file_open in xw.apps:
-                    if file_open.books[0].name.lower() == file.lower():
-                        file_open.kill()
-            else:
-                continue
             file_name:str = file[0:4]
             lista[file_name] = self.path_bases + file
         return lista
+    
+    def _fechar_excel(self, *, file_name:str, timeout=15) -> bool:
+        for _ in range(timeout):
+            for app in xw.apps:
+                for open_file in app.books:
+                    if file_name.lower() == open_file.name.lower():
+                        open_file.close()
+                        if len(xw.apps) <= 0:
+                            app.kill()
+                        return True
+            sleep(1)
+        return False
     
 if __name__ == "__main__":
     pass
