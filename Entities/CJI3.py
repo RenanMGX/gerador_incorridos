@@ -118,6 +118,9 @@ class CJI3:
                             
                             if self.session.findById("wnd[0]/sbar").text == "Não foi selecionado nenhum objeto com os critérios de seleção indicados.":
                                 raise FileNotFoundError("Não foi selecionado nenhum objeto com os critérios de seleção indicados.")
+                            
+                            if (error:=self.session.findById("wnd[0]/sbar").text) == "Memória escassa. Encerrar a transação antes de pausa !":
+                                raise Exception(error)
 
                             lista["nomes"][centro_custo]
                             empreendimento_for_save:str = f"{centro_custo} - {lista['nomes'][centro_custo]} - {datetime.now().strftime('%d-%m-%Y')}.xlsx".upper()
