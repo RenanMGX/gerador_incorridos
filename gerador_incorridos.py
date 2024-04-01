@@ -28,7 +28,7 @@ if __name__ == "__main__":
     
     try:
         
-        infor = SharePointFolder.infor_obras(path=f"C:/Users/renan.oliveira/PATRIMAR ENGENHARIA S A/Janela da Engenharia Controle de Obras - _Base de Dados - Geral/Informações de Obras.xlsx")
+        infor = SharePointFolder.infor_obras(path=f"C:/Users/renan.oliveira/PATRIMAR ENGENHARIA S A/Janela da Engenharia Controle de Obras - Base de Dados - Geral/Informações de Obras.xlsx")
         
         if gerar_relatorios:
             botSAP: CJI3 = CJI3(date=date)
