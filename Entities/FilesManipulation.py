@@ -16,17 +16,13 @@ class Files():
         self.__path_bases:str = os.getcwd() + "\\Bases\\"
         if not os.path.exists(self.path_bases):
             os.makedirs(self.path_bases)
-        for _file in os.listdir(self.path_bases):
-            try:
-                os.unlink(self.path_bases + _file)
-            except:
-                pass
+            
         self.__path_incorridos:str = os.getcwd() + "\\incorridos_gerados\\"
         if not os.path.exists(self.path_incorridos):
             os.makedirs(self.path_incorridos)
         for _file in os.listdir(self.path_incorridos):
             try:
-                os.unlink(self.path_incorridos)
+                os.unlink(self.path_incorridos + _file)
             except:
                 pass
             

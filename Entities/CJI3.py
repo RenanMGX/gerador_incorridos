@@ -129,7 +129,6 @@ class CJI3:
                             
                             #print(file)
                             if os.path.exists(file):
-                                
                                 try:
                                     os.unlink(file)
                                 except PermissionError:
