@@ -123,8 +123,8 @@ class Files():
                 sheet_temp = wb.sheets['temp']
                 
                 sheet_principal.range('E2').value = f"{name} - {nome_empeendimento}" #Nome
-                
-                sheet_principal.range('E3').value = self.date.strftime('%d/%m/%Y') #Data referencia
+
+                sheet_principal.range('E3').value = self.date.strftime('%m/%d/%Y') #Data referencia
                 
                 #descrição codigos
                 sheet_principal.range('E47:E54').value = [
@@ -257,7 +257,7 @@ class Files():
         return round(sum(df['Valor/moeda objeto'].tolist()), 2)
     
     def _carregar_base(self, *, path:str, incc_fonte:dict) -> pd.DataFrame:
-        df: pd.DataFrame = pd.read_excel(path)
+        df: pd.DataFrame = pd.read_excel(path, engine="openpyxl")
         
         # adicionando INCC na base e salvando ela
         incc:list = []
@@ -356,9 +356,12 @@ class Files():
         return False
     
 if __name__ == "__main__":
+    from sharePointFolder import SharePointFolder # type: ignore
+    
+    infor = SharePointFolder.infor_obras(path=f"C:/Users/renan.oliveira/PATRIMAR ENGENHARIA S A/Janela da Engenharia Controle de Obras - _Base de Dados - Geral/Informações de Obras.xlsx")
     date = datetime.now()
     bot = Files(date, description_sap_tags_path=f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\Descrição SAP.xlsx")
-    print(bot._listar_arquivos())
+    bot.gerar_incorridos(infor=infor)
     #print(f"\n\n{bot.gerar_arquivos()}")
     #print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
     #print(f"\n\n{bot.incc_valor()}")
