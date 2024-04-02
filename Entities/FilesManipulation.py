@@ -35,6 +35,8 @@ class Files():
         else:
             self.__description_sap_tags = pd.DataFrame()
             
+        self.__files_base:dict = self._listar_arquivos()
+            
             
     @property
     def path_incorridos(self):
@@ -81,7 +83,7 @@ class Files():
         
     def gerar_incorridos(self, *, infor:dict):
         incc = self._incc_valor()
-        self.__files_base = self._listar_arquivos()
+        
         for name, file_path in self.__files_base.items():
             df:pd.DataFrame = self._carregar_base(path=file_path, incc_fonte=incc)
             print(f"{name} -> Executando")
