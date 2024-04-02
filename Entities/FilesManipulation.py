@@ -324,10 +324,17 @@ class Files():
     def _listar_arquivos(self) -> Dict[str,str]:
         lista:dict = {}
         for file in os.listdir(self.path_bases):
+            if "~$" in file:
+                continue
+            print(file)
             new_file = file.replace(".XLSX",".xlsx")
-
-            self._fechar_excel(file_name=new_file)
-            os.rename((self.path_bases + file),(self.path_bases + new_file))
+            
+            try:
+                os.rename((self.path_bases + file),(self.path_bases + new_file))
+            except PermissionError:
+                print("aberto")
+                self._fechar_excel(file_name=new_file, timeout=2)
+                os.rename((self.path_bases + file),(self.path_bases + new_file))
                         
             file = new_file
             file_name:str = file[0:4]
@@ -349,7 +356,7 @@ class Files():
 if __name__ == "__main__":
     date = datetime.now()
     bot = Files(date, description_sap_tags_path=f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\Descrição SAP.xlsx")
-    print(bot.descript(codigo="POCRCD24", centro_custo="A030"))
+    print(bot._listar_arquivos())
     #print(f"\n\n{bot.gerar_arquivos()}")
     #print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
     #print(f"\n\n{bot.incc_valor()}")
