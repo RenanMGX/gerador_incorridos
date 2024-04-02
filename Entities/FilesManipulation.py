@@ -8,9 +8,12 @@ from datetime import datetime
 from typing import Dict, List
 from shutil import copy2
 from time import sleep
+from getpass import getuser
 
 class Files():
-    def __init__(self, date:datetime) -> None:
+    def __init__(self, date:datetime, description_sap_tags_path:str = "") -> None:
+        if not isinstance(date, datetime):
+            raise TypeError("apenas datas no formato datetime")
         self.date:datetime = date
         
         self.__path_bases:str = os.getcwd() + "\\Bases\\"
@@ -25,8 +28,13 @@ class Files():
                 os.unlink(self.path_incorridos + _file)
             except:
                 pass
+        
+        self.__description_sap_tags:pd.DataFrame
+        if not description_sap_tags_path == "":
+            self.__description_sap_tags = pd.read_excel(description_sap_tags_path)
+        else:
+            self.__description_sap_tags = pd.DataFrame()
             
-        self.__files_base = self._listar_arquivos()
             
     @property
     def path_incorridos(self):
@@ -52,8 +60,28 @@ class Files():
     def files_base(self):
         return self.__files_base
     
+    @property
+    def description_sap_tags(self):
+        return self.__description_sap_tags
+    
+    def descript(self, *, codigo:str, centro_custo:str) -> str:
+        if self.description_sap_tags.empty:
+            return ""
+        df:pd.DataFrame = self.description_sap_tags
+
+        df_codigo = df[df['Código SAP'] == codigo]
+        if not df_codigo.empty:
+            df_centro_custo = df_codigo[df_codigo['Código da Obra'] == centro_custo]
+            if not df_centro_custo.empty:
+                return str(df_centro_custo['Descrição'].values[0])
+            else:
+                return ""
+        else:
+            return ""
+        
     def gerar_incorridos(self, *, infor:dict):
         incc = self._incc_valor()
+        self.__files_base = self._listar_arquivos()
         for name, file_path in self.__files_base.items():
             df:pd.DataFrame = self._carregar_base(path=file_path, incc_fonte=incc)
             print(f"{name} -> Executando")
@@ -96,6 +124,18 @@ class Files():
                 
                 sheet_principal.range('E3').value = self.date.strftime('%d/%m/%Y') #Data referencia
                 
+                #descrição codigos
+                sheet_principal.range('E47:E54').value = [
+                    [self.descript(codigo="POCRCD23", centro_custo=name)],
+                    [self.descript(codigo="POCRCD24", centro_custo=name)],
+                    [self.descript(codigo="POCRCD25", centro_custo=name)],
+                    [self.descript(codigo="POCRCD26", centro_custo=name)],
+                    [self.descript(codigo="POCRCD27", centro_custo=name)],
+                    [self.descript(codigo="POCRCD28", centro_custo=name)],
+                    [self.descript(codigo="POCRCD29", centro_custo=name)],
+                    [self.descript(codigo="POCRCD30", centro_custo=name)]
+                ]
+                
                 etapas:int = len(datas)
                 etapa:int = 1
                 for date in datas:
@@ -107,6 +147,7 @@ class Files():
                     sheet_temp.range('A:A').copy()
                     sheet_principal.range('N1').paste()
                     app.api.CutCopyMode = False
+                    
                 
                     sheet_principal.range('N6').value = date #data
                     
@@ -281,7 +322,6 @@ class Files():
         return indices   
     
     def _listar_arquivos(self) -> Dict[str,str]:
-            
         lista:dict = {}
         for file in os.listdir(self.path_bases):
             new_file = file.replace(".XLSX",".xlsx")
@@ -307,7 +347,9 @@ class Files():
         return False
     
 if __name__ == "__main__":
-    pass
+    date = datetime.now()
+    bot = Files(date, description_sap_tags_path=f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\Descrição SAP.xlsx")
+    print(bot.descript(codigo="POCRCD24", centro_custo="A030"))
     #print(f"\n\n{bot.gerar_arquivos()}")
     #print(bot.copiar_destino(f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\"))
     #print(f"\n\n{bot.incc_valor()}")
