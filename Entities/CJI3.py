@@ -20,6 +20,14 @@ class CJI3:
         self.__bases_path:str = os.getcwd() + "\\Bases\\"
         if not os.path.exists(self.bases_path):
             os.makedirs(self.bases_path)
+        for _file in os.listdir(self.bases_path):
+            if _file.endswith(".xlsx"):
+                try:
+                    os.unlink(self.bases_path + _file)
+                except PermissionError:
+                    self._fechar_excel(file_name=_file)
+                    os.unlink(self.bases_path + _file)
+                
     
     @property
     def date(self):
