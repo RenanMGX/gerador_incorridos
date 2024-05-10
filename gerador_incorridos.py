@@ -42,3 +42,11 @@ if __name__ == "__main__":
     except Exception as error:
         print(traceback.format_exc())
         erro_log()
+        path:str = "logs/"
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_name = path + f"LogError_{datetime.now().strftime('%d%m%Y%H%M%Y')}.txt"
+        with open(file_name, 'w', encoding='utf-8')as _file:
+            _file.write(traceback.format_exc())
+        raise error
+                    
