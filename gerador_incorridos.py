@@ -26,13 +26,21 @@ if __name__ == "__main__":
     gerar_relatorios:bool = True
     manipular_relatorio:bool = True
     
-    sharepoint_path = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP"
+    sharepoint_path:str = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP"
     
     try:
         if not os.path.exists(sharepoint_path):
             raise FileNotFoundError(f"não foi possivel localizar a pasta do sharepoint '{sharepoint_path}'")
         
-        infor = SharePointFolder.infor_obras(path=os.path.join(sharepoint_path,"Informações de Obras.xlsx"))
+        infor_obras_path:str = os.path.join(sharepoint_path,"Informações de Obras.xlsx")
+        if not os.path.exists(infor_obras_path):
+            raise FileNotFoundError(f"não foi possivel localizar o arquivo do sharepoint '{infor_obras_path}'")
+        
+        descri_sap_path:str = os.path.join(sharepoint_path, "Descrição SAP.xlsx")
+        if not os.path.exists(descri_sap_path):
+            raise FileNotFoundError(f"não foi possivel localizar o arquivo do sharepoint '{descri_sap_path}'")
+        
+        infor = SharePointFolder.infor_obras(path=infor_obras_path)
         
         if gerar_relatorios:
             botSAP: CJI3 = CJI3(date=date)
@@ -40,7 +48,7 @@ if __name__ == "__main__":
             botSAP.gerar_relatorios_SAP(lista=infor)
         
         if manipular_relatorio:
-            files_manipulation: Files = Files(date, description_sap_tags_path=os.path.join(sharepoint_path, "Descrição SAP.xlsx"))
+            files_manipulation: Files = Files(date, description_sap_tags_path=descri_sap_path)
             files_manipulation.gerar_incorridos(infor=infor)
             files_manipulation.salvar_no_destino(destino=sharepoint_path)        
     
