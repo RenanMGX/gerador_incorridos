@@ -3,11 +3,42 @@ import os
 from copy import deepcopy
 import traceback
 from random import randint
+from getpass import getuser
+from typing import Literal, Dict
 
 class Credential:
-    def __init__(self, path:str) -> None:
-        exten = ".json"
-        self.path = path+exten if not path.endswith(exten) else path
+    def __init__(self, name_file:Literal["SAP_PRD", "MYSQL_DB"], path:str=f"C:/Users/{getuser()}/.patrimar_rpa/credenciais/") -> None:
+        name:str = str(name_file)
+        if not isinstance(path, str):
+            raise TypeError("apenas strings")
+        if not isinstance(name, str):
+            raise TypeError("apenas strings")
+        if not name.endswith('.json'):
+            name += '.json'
+        
+        
+        
+        temp_path:str
+        if "\\" in path:
+            if not path.endswith("\\"):
+                path += "\\"
+            temp_path = "\\".join(path.split("\\")[0:-1]) + "\\"
+            if not os.path.exists(temp_path):
+                os.makedirs(temp_path)
+        
+        if "/" in path:
+            if not path.endswith("/"):
+                path += "/"
+            temp_path = "/".join(path.split("/")[0:-1]) + "/"
+            if not os.path.exists(temp_path):
+                os.makedirs(temp_path)
+                
+        self.__path = path + name
+    
+    @property
+    def path(self):
+        return self.__path
+            
         
     def load(self) -> dict:
         """crie / ler um arquivo json contendo as credenciais
@@ -24,8 +55,8 @@ class Credential:
         
         if not os.path.exists(self.path):
             with open(self.path, 'w')as _file:
-                json.dump({"user": "", "password": "", "key": 0},_file)
-            raise FileNotFoundError(f"{self.path=} não existe! então foi criar uma no repositorio, edite as credenciais e execute o codigo novamente!")
+                json.dump({"key": 0},_file)
+            #raise FileNotFoundError(f"{self.path=} não existe! então foi criar uma no repositorio, edite as credenciais e execute o codigo novamente!")
 
         with open(self.path, 'r')as _file:
             result:dict = json.load(_file)
@@ -39,15 +70,15 @@ class Credential:
         return new_result
                             
     
-    def save(self, *, user:str, password:str) -> None:
-        key = randint(500,6000)
+    def save(self, **kargs) -> None:
+        token = randint(500,6000)
+        
+        words:Dict[str,object] = {key:self.criar_cifra(value, token) for key,value in kargs.items()}
+        words['key'] = token
+        
         with open(self.path, 'w')as _file:
             json.dump(
-                {
-                    'user':self.criar_cifra(user, key),
-                    'password':self.criar_cifra(password, key),
-                    'key': key
-                },
+                words,
                 _file)
     
     def criar_cifra(self, text:str, key:int=1, response_json:bool=False) -> str:
@@ -85,6 +116,8 @@ class Credential:
         return self.criar_cifra(text, -key)
         
 if __name__ == "__main__":
-    credential = Credential("imobme_credential.json")
+    credential = Credential('SAP_PRD')
     
     print(credential.load())
+    
+    

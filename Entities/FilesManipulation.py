@@ -9,6 +9,7 @@ from typing import Dict, List
 from shutil import copy2
 from time import sleep
 from getpass import getuser
+from .crenciais import Credential
 
 class Files():
     def __init__(self, date:datetime, description_sap_tags_path:str = "") -> None:
@@ -302,8 +303,7 @@ class Files():
         return df
     
     def _incc_valor(self):
-        with open("db_connection.json", 'r')as _file:
-            db_config:dict = json.load(_file)
+        db_config:dict = Credential('MYSQL_DB').load()
         
         connection = mysql.connector.connect(
             host=db_config['host'],
@@ -314,7 +314,7 @@ class Files():
         
         cursor = connection.cursor()
         cursor.execute("SELECT mes, valor FROM incc")
-        resultado:list = cursor.fetchall()
+        resultado:List[List[datetime]] = cursor.fetchall()#type: ignore
         
         indices = {}
         for indice in resultado:

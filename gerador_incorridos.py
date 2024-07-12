@@ -3,7 +3,7 @@ import traceback
 
 from Entities.CJI3 import CJI3
 from Entities.FilesManipulation import Files
-from Entities.credenciais.credenciais import Credential # type: ignore
+from Entities.crenciais import Credential # type: ignore
 from Entities.sharePointFolder import SharePointFolder # type: ignore
 from datetime import datetime
 from getpass import getuser
@@ -21,13 +21,18 @@ def erro_log():
 
 if __name__ == "__main__":
     date:datetime = datetime.now()
-    crd:dict = Credential("credencialSAP").load()
+    crd:dict = Credential('SAP_PRD').load()
     
     gerar_relatorios:bool = True
     manipular_relatorio:bool = True
     
+    sharepoint_path = f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP"
+    
     try:
-        infor = SharePointFolder.infor_obras(path=f"C:/Users/renan.oliveira/PATRIMAR ENGENHARIA S A/Janela da Engenharia Controle de Obras - Base de Dados - Geral/Informações de Obras.xlsx")
+        if not os.path.exists(sharepoint_path):
+            raise FileNotFoundError(f"não foi possivel localizar a pasta do sharepoint '{sharepoint_path}'")
+        
+        infor = SharePointFolder.infor_obras(path=os.path.join(sharepoint_path,"Informações de Obras.xlsx"))
         
         if gerar_relatorios:
             botSAP: CJI3 = CJI3(date=date)
@@ -35,17 +40,17 @@ if __name__ == "__main__":
             botSAP.gerar_relatorios_SAP(lista=infor)
         
         if manipular_relatorio:
-            files_manipulation: Files = Files(date, description_sap_tags_path=f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\Descrição SAP.xlsx")
+            files_manipulation: Files = Files(date, description_sap_tags_path=os.path.join(sharepoint_path, "Descrição SAP.xlsx"))
             files_manipulation.gerar_incorridos(infor=infor)
-            files_manipulation.salvar_no_destino(destino=f"C:\\Users\\{getuser()}\\PATRIMAR ENGENHARIA S A\\Janela da Engenharia Controle de Obras - Incorridos - SAP\\")        
+            files_manipulation.salvar_no_destino(destino=sharepoint_path)        
     
     except Exception as error:
         print(traceback.format_exc())
         erro_log()
-        path:str = "logs/"
+        path:str = os.path.join(os.getcwd(), "logs/")
         if not os.path.exists(path):
             os.makedirs(path)
-        file_name = path + f"LogError_{datetime.now().strftime('%d%m%Y%H%M%Y')}.txt"
+        file_name = os.path.join(path, f"LogError_{datetime.now().strftime('%d%m%Y%H%M%Y')}.txt")
         with open(file_name, 'w', encoding='utf-8')as _file:
             _file.write(traceback.format_exc())
         raise error
