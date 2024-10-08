@@ -9,6 +9,9 @@
 *db_connection.json
 *Bases
 *credencialSAP.json
+*Material
+*config.init
+*Logs
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python

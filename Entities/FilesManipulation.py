@@ -1,6 +1,5 @@
 import os
 import xlwings as xw
-import json
 import mysql.connector
 import pandas as pd
 
@@ -9,7 +8,8 @@ from typing import Dict, List
 from shutil import copy2
 from time import sleep
 from getpass import getuser
-from .crenciais import Credential
+from .dependencies.credenciais import Credential
+from .dependencies.config import Config
 
 class Files():
     def __init__(self, date:datetime, description_sap_tags_path:str = "") -> None:
@@ -303,7 +303,7 @@ class Files():
         return df
     
     def _incc_valor(self):
-        db_config:dict = Credential('MYSQL_DB').load()
+        db_config:dict = Credential(Config()['credential']['db']).load()
         
         connection = mysql.connector.connect(
             host=db_config['host'],

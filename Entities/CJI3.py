@@ -6,7 +6,6 @@ import xlwings as xw
 
 from datetime import datetime
 from time import sleep
-from .crenciais import Credential # type: ignore
 
 class CJI3:
     def __init__(self, *, date:datetime) -> None:
@@ -202,9 +201,10 @@ class CJI3:
         return False    
 
 if __name__ == "__main__":
-    date: datetime = datetime.now()
+    pass
+    # date: datetime = datetime.now()
     
-    crd = Credential('SAP_PRD').load()
+    # crd = Credential('SAP_PRD').load()
     
-    bot = CJI3(date=date)
-    bot.conectar(user=crd['user'], password=crd['password'])
+    # bot = CJI3(date=date)
+    # bot.conectar(user=crd['user'], password=crd['password'])
