@@ -98,6 +98,8 @@ class Files():
                     continue
                 
                 while not (data - relativedelta(months=1)) == last_date:
+                    if last_date > datas[-1]:
+                        break
                     last_date = last_date + (relativedelta(months=1))
                     result_datas.append(last_date)
                 
