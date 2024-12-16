@@ -10,6 +10,7 @@ from time import sleep
 from getpass import getuser
 from .dependencies.credenciais import Credential
 from .dependencies.config import Config
+from dateutil.relativedelta import relativedelta
 
 class Files():
     def __init__(self, date:datetime, description_sap_tags_path:str = "") -> None:
@@ -81,7 +82,32 @@ class Files():
                 return ""
         else:
             return ""
+    
+    @staticmethod
+    def __date_verify(datas:list):
+        datas = list(set(datas))
+        datas = sorted(datas)
+        result_datas:list = []
+        last_date = ""
         
+        for data in datas:
+            try:
+                if not last_date:
+                    result_datas.append(data)
+                    last_date = data
+                    continue
+                
+                while not (data - relativedelta(months=1)) == last_date:
+                    last_date = last_date + (relativedelta(months=1))
+                    result_datas.append(last_date)
+                
+                result_datas.append(data)
+                last_date = data
+            except:
+                pass
+                    
+        return result_datas
+       
     def gerar_incorridos(self, *, infor:dict):
         incc = self._incc_valor()
         
@@ -96,9 +122,7 @@ class Files():
             datas.pop(datas.index(pd.NaT))# type: ignore
             
             datas = [data.replace(day=1) for data in datas]
-            datas = set(datas)# type: ignore
-            datas = list(datas)
-            datas = sorted(datas)
+            datas = Files.__date_verify(datas)
             datas.reverse()
 
             if os.path.exists(path_incorrido):
@@ -255,7 +279,9 @@ class Files():
         df = df[(df['Data de lançamento'].dt.year == date.year) & (df['Data de lançamento'].dt.month == date.month)]
         df = df[df['Elemento PEP'].str.contains(termo, case=False)]
         
-        return round(sum(df['Valor/moeda objeto'].tolist()), 2)
+        if not df.empty:
+            return round(sum(df['Valor/moeda objeto'].tolist()), 2)
+        return 0.0
     
     def _carregar_base(self, *, path:str, incc_fonte:dict) -> pd.DataFrame:
         df: pd.DataFrame = pd.read_excel(path, engine="openpyxl")
@@ -290,15 +316,28 @@ class Files():
         
         #Tratando Base antes de retornar na função
         df = df.replace(float('nan'), "")
-        df = df[~df['Classe de custo'].astype(str).str.startswith('60')]
-        df = df[df['Elemento PEP'] != "POCRCIAI"]
-        df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
-        df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
-        df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENOS"]
-        df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
-        df = df[df['Denomin.da conta de contrapartida'] != "T. ESTOQUE INICIAL"]
-        df = df[df['Denomin.da conta de contrapartida'] != "T.  EST. TERRENOS"]
-        df = df[df['Denomin.da conta de contrapartida'] != "T. EST. TERRENOS"]
+        
+        #df = df[~df['Classe de custo'].astype(str).str.startswith('60')]
+        #df = df[df['Elemento PEP'] != "POCRCIAI"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "CUSTO DE TERRENO"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "TERRENOS"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENOS"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "ESTOQUE DE TERRENO"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "T. ESTOQUE INICIAL"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "T.  EST. TERRENOS"]
+        #df = df[df['Denomin.da conta de contrapartida'] != "T. EST. TERRENOS"]
+        
+        df = df[
+            (~df['Classe de custo'].astype(str).str.startswith('60')) &
+            (df['Elemento PEP'] != "POCRCIAI") &
+            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "CUSTO DE TERRENO".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "TERRENOS".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "ESTOQUE DE TERRENOS".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "ESTOQUE DE TERRENO".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "T. ESTOQUE INICIAL".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "T.  EST. TERRENOS".lower().replace(' ', ''))             
+        ]
+        
         
         return df
     
