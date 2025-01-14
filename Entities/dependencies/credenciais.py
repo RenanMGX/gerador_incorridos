@@ -1,11 +1,9 @@
 import json
 import os
 from copy import deepcopy
-import traceback
 from random import randint
 from getpass import getuser
 from typing import Literal, Dict
-import asyncio
 
 class CredentialFileNotFoundError(Exception):
     def __init__(self, *args: object) -> None:
@@ -127,7 +125,6 @@ class Credential:
         return self.criar_cifra(text, -key)
         
 if __name__ == "__main__":
-    crd = Credential('SAP_QAS-Renan')
-    
+    crd = Credential('SAP_QAS')
     
     print(crd.load())

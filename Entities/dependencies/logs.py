@@ -5,14 +5,14 @@ from datetime import datetime
 import re
 from .functions import Functions
 import traceback
-import asyncio
 import requests
 import json
 from getpass import getuser
 from socket import gethostname
 from .project_name import PROJECT_NAME
 from .config import Config
-
+from functions import P
+from credenciais import Credential
 
 class Logs:
     @property
@@ -23,9 +23,9 @@ class Logs:
     def name(self) -> str:
         return self.__name
     
-    def __init__(self, name:str=PROJECT_NAME, *, path_folder:str=os.path.join(os.getcwd(), 'Logs'), hostname:str=Config()['log']['hostname'], port:str=Config()['log']['port'], token:str=Config()['log']['token']) -> None:
+    def __init__(self, name:str=PROJECT_NAME, *, path_folder:str=os.path.join(os.getcwd(), 'Logs'), hostname:str=Config()['log']['hostname'], port:str=Config()['log']['port'], token:str=Credential(Config()['log']['token']).load().get('token')) -> None:
         self.__path_folder:str = path_folder
-        self.__name:str = PROJECT_NAME
+        self.__name:str = name
         if not os.path.exists(self.path_folder):
             os.makedirs(self.path_folder)
             
@@ -102,7 +102,9 @@ class Logs:
                 #pass
                 Functions.fechar_excel(file)
             except Exception as error:
-                raise error   
+                raise error  
+        
+        print(P(f"{status}: {str(description)}", color='magenta')) 
 
 if __name__ == "__main__":
     bot = Logs("testes")

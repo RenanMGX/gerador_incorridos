@@ -6,9 +6,18 @@ import xlwings as xw
 
 from datetime import datetime
 from time import sleep
+from typing import Dict, List
+from dependencies.sap import SAPManipulation
+from dependencies.functions import Functions
+from dependencies.credenciais import Credential
+from dependencies.config import Config
+from dependencies.logs import Logs, traceback
 
-class CJI3:
+class CJI3(SAPManipulation):
     def __init__(self, *, date:datetime) -> None:
+        crd:dict = Credential(Config()['credential']['crd']).load()
+        super().__init__(user=crd.get("user"), password=crd.get("password"), ambiente=crd.get("ambiente"))
+        
         if not isinstance(date, datetime):
             raise TypeError("apenas datetime na instancia 'date'")
         
@@ -24,7 +33,7 @@ class CJI3:
                 try:
                     os.unlink(self.bases_path + _file)
                 except PermissionError:
-                    self._fechar_excel(file_name=_file)
+                    Functions.fechar_excel(_file)
                     os.unlink(self.bases_path + _file)
                 
     
@@ -50,37 +59,22 @@ class CJI3:
             raise TypeError(f"o valor '{value}' atribuido para 'self.bases_path' não é uma string")
         self.__bases_path = value
     
-    @property
-    def session(self):
-        return self.__session
             
-    def conectar(self, *, user, password) -> bool:
-        try:
-            if not self._verificar_sap_aberto():
-                subprocess.Popen(r"C:\Program Files (x86)\SAP\FrontEnd\SapGui\saplogon.exe")
-                sleep(5)
-            
-            SapGuiAuto: win32com.client.CDispatch = win32com.client.GetObject("SAPGUI")# type: ignore
-            application: win32com.client.CDispatch = SapGuiAuto.GetScriptingEngine# type: ignore
-            connection = application.OpenConnection("S4P", True) # type: ignore
-            self.__session: win32com.client.CDispatch = connection.Children(0)# type: ignore
-            
-            self.session.findById("wnd[0]/usr/txtRSYST-BNAME").text = user # Usuario
-            self.session.findById("wnd[0]/usr/pwdRSYST-BCODE").text = password # Senha
-            self.session.findById("wnd[0]").sendVKey(0)
-            
-            return True
-        except Exception as error:
-            raise ConnectionError(f"não foi possivel se conectar ao SAP motivo: {type(error).__class__} -> {error}")
-    
-    def gerar_relatorios_SAP(self, *, lista:dict, peps:list=[".po"], gerar_quantos:int=987654321) -> None:
+    @SAPManipulation.start_SAP
+    def gerar_relatorios_SAP(self, *, lista:Dict[str, list|dict], peps:list=[".po"], gerar_quantos:int=987654321, numero_relatorios:str="999999999") -> None:
         contador_gerados = 1
         if not isinstance(peps, list):
             raise TypeError("apenas listas")
+        if not isinstance(lista['executar'], list):
+            raise TypeError("em 'lista['executar']' apenas listas")
+        if not isinstance(lista["nomes"], dict):
+            raise TypeError("em 'lista['executar']' apenas dicionários")
+        
         try:
-            lista_executar = lista['executar']
+            lista_executar:list = lista['executar']
         except KeyError:
             raise KeyError("chave 'executar' não foi encontrada")
+
         
         agora:datetime = datetime.now()
 
@@ -119,7 +113,7 @@ class CJI3:
                             self.session.findById("wnd[0]/usr/ctxtR_BUDAT-HIGH").text = self.dateSTR
                             self.session.findById("wnd[0]/usr/ctxtP_DISVAR").text = "/FABRICIO"
                             self.session.findById("wnd[0]/usr/btnBUT1").press()
-                            self.session.findById("wnd[1]/usr/txtKAEP_SETT-MAXSEL").text = "999999999" # valor 999999999
+                            self.session.findById("wnd[1]/usr/txtKAEP_SETT-MAXSEL").text = numero_relatorios
                             self.session.findById("wnd[1]/tbar[0]/btn[0]").press()
                             self.session.findById("wnd[0]/tbar[1]/btn[8]").press()
                             
@@ -139,7 +133,7 @@ class CJI3:
                                 try:
                                     os.unlink(file)
                                 except PermissionError:
-                                    if self._fechar_excel(file_name=empreendimento_for_save):
+                                    if Functions.fechar_excel(empreendimento_for_save):
                                         os.unlink(file)                              
                                         
                             sleep(1)
@@ -151,12 +145,13 @@ class CJI3:
                             
                             sleep(3)
                             
-                            self._fechar_excel(file_name=empreendimento_for_save)
+                            Functions.fechar_excel(empreendimento_for_save)
                             
                             print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            Finalizado!")  
                             break          
                         except Exception as error:
                             print(f"{datetime.now().strftime('%d/%m/%Y - %H:%M:%S')}            error -> {type(error)} -> {error}")
+                            Logs().register(status='Report', description=f"erro ao gerar relatório {codigo_empreendimento} -> {type(error)} -> {error}", exception=traceback.format_exc())
                             continue
                 
                 if contador_gerados < gerar_quantos:
@@ -180,25 +175,6 @@ class CJI3:
             except Exception as error:
                 print(f"não foi possivel fechar o SAP {type(error)} | {error}")
     
-    
-    def _fechar_excel(self, *, file_name:str, timeout=15) -> bool:
-        for _ in range(timeout):
-            for app in xw.apps:
-                for open_file in app.books:
-                    if file_name.lower() == open_file.name.lower():
-                        open_file.close()
-                        if len(xw.apps) <= 0:
-                            app.kill()
-                        return True
-            sleep(1)
-        return False
-     
-        
-    def _verificar_sap_aberto(self) -> bool:
-        for process in psutil.process_iter(['name']):
-            if "saplogon" in process.name().lower():
-                return True
-        return False    
 
 if __name__ == "__main__":
     pass

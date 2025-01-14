@@ -1,12 +1,10 @@
 import os
 from Entities.CJI3 import CJI3
 from Entities.FilesManipulation import Files
-from Entities.dependencies.credenciais import Credential
 from Entities.dependencies.config import Config
 from Entities.dependencies.logs import Logs, traceback
 from Entities.sharePointFolder import SharePointFolder # type: ignore
 from datetime import datetime
-from getpass import getuser
 #from time import sleep
 #from getpass import getuser
 
@@ -17,11 +15,8 @@ def erro_log():
     with open(f"{path_log_error}\\{datetime.now().strftime('%d-%m-%Y %H_%M_%S')}.txt", 'w')as _file:
         _file.write(traceback.format_exc())
 
-
-
 if __name__ == "__main__":
     date:datetime = datetime.now()
-    crd:dict = Credential(Config()['credential']['crd']).load()
     
     gerar_relatorios:bool = True
     manipular_relatorio:bool = True
@@ -44,13 +39,13 @@ if __name__ == "__main__":
         
         if gerar_relatorios:
             botSAP: CJI3 = CJI3(date=date)
-            botSAP.conectar(user=crd['user'], password=crd['password'])
-            botSAP.gerar_relatorios_SAP(lista=infor)
+            botSAP.gerar_relatorios_SAP(lista=infor)#, gerar_quantos=2, numero_relatorios="10000")
         
         if manipular_relatorio:
             files_manipulation: Files = Files(date, description_sap_tags_path=descri_sap_path)
             files_manipulation.gerar_incorridos(infor=infor)
-            files_manipulation.salvar_no_destino(destino=sharepoint_path)        
+            #files_manipulation.salvar_no_destino(destino=r"C:\\Users\\renan.oliveira\Downloads") # <-------------- alterar depois 
+            files_manipulation.salvar_no_destino(destino=sharepoint_path)
 
         Logs().register(status='Concluido', description="Automação finalizada com Sucesso!")
     except Exception as err:
