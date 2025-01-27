@@ -2,6 +2,8 @@ import os
 import xlwings as xw
 import mysql.connector
 import pandas as pd
+import re
+import shutil
 
 from datetime import datetime
 from typing import Dict, List
@@ -12,6 +14,7 @@ from .dependencies.credenciais import Credential
 from .dependencies.config import Config
 from dateutil.relativedelta import relativedelta
 from dependencies.functions import Functions
+from Entities.sharepoint import SharePoint
 
 class Files():
     """
@@ -313,13 +316,33 @@ class Files():
             if file.endswith(".xlsx"):
                 copy2(self.path_bases + file, bases_path)
         
-        incorridos_path = destino + "Incorridos\\"
-        criar_pasta(incorridos_path)
+        # incorridos_path = destino + "Incorridos\\"
+        # criar_pasta(incorridos_path)
         
-        for file2 in os.listdir(self.path_incorridos):
-            if file2.endswith(".xlsx"):
-                copy2(self.path_incorridos + file2, incorridos_path)
-                
+        # for file2 in os.listdir(self.path_incorridos):
+        #     if file2.endswith(".xlsx"):
+        #         copy2(self.path_incorridos + file2, incorridos_path)
+        
+    def salvar_Incorridos(self, target: str):
+        sp = SharePoint()
+        sp.consultar()
+        df = sp.df
+        
+        path = self.path_incorridos
+        for file in os.listdir(path):
+            file = os.path.join(path, file)
+            if (centro:=re.search(r'[A-z]{1}[0-9]{3}', os.path.basename(file))):
+                centro = centro.group()
+                if not (uf:=df[df['C_x00f3_digodaObra'] == centro]).empty:
+                    uf = uf['UF'].values[0]
+                    if not (empresa:=df[df['C_x00f3_digodaObra'] == centro]).empty:
+                        empresa = empresa['Construtora'].values[0]
+                        final_target = os.path.join(target, empresa, uf)
+                        if os.path.exists(final_target):
+                            if file.endswith(('.xlsx', '.xls', '.xlsm')):
+                                shutil.copy2(file, final_target)    
+                        
+                                    
     def _calcular_pep_por_data(self, date: datetime, df: pd.DataFrame, termo: str) -> float:
         """
         Calcula o valor total de um termo específico em uma data específica.

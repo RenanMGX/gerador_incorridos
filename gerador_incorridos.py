@@ -22,6 +22,7 @@ if __name__ == "__main__":
     manipular_relatorio:bool = True
     
     sharepoint_path:str = Config()['paths']['sharepoint_path']
+    sharepoint_incorridos_path:str = Config()['paths']['sharepoint_incorrido']
     
     try:
         if not os.path.exists(sharepoint_path):
@@ -46,6 +47,7 @@ if __name__ == "__main__":
             files_manipulation.gerar_incorridos(infor=infor)
             #files_manipulation.salvar_no_destino(destino=r"C:\\Users\\renan.oliveira\Downloads") # <-------------- alterar depois 
             files_manipulation.salvar_no_destino(destino=sharepoint_path)
+            files_manipulation.salvar_Incorridos(target=sharepoint_incorridos_path)
 
         Logs().register(status='Concluido', description="Automação finalizada com Sucesso!")
     except Exception as err:
