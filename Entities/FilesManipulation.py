@@ -324,6 +324,19 @@ class Files():
         #         copy2(self.path_incorridos + file2, incorridos_path)
         
     def salvar_Incorridos(self, target: str):
+        """
+        Este script processa arquivos em um diretório especificado e os copia para um diretório de destino com base em certas condições.
+        Etapas:
+        1. Definir o caminho para o diretório contendo os arquivos a serem processados.
+        2. Iterar sobre cada arquivo no diretório.
+        3. Para cada arquivo, verificar se o nome base corresponde a um padrão específico (uma letra seguida de três dígitos).
+        4. Se uma correspondência for encontrada, extrair a parte correspondente (centro).
+        5. Verificar se há uma entrada correspondente no DataFrame `df` para o centro extraído.
+        6. Se uma entrada correspondente for encontrada, extrair os valores 'UF' e 'Construtora'.
+        7. Construir o caminho de destino final usando os valores extraídos 'Construtora' e 'UF'.
+        8. Se o caminho de destino final existir, verificar se o arquivo tem uma extensão do Excel (.xlsx, .xls, .xlsm).
+        9. Se o arquivo tiver uma extensão do Excel, copiá-lo para o caminho de destino final.
+        """        
         sp = SharePoint()
         sp.consultar()
         df = sp.df
@@ -408,12 +421,12 @@ class Files():
         df = df[
             (~df['Classe de custo'].astype(str).str.startswith('60')) &
             (df['Elemento PEP'] != "POCRCIAI") &
-            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "CUSTO DE TERRENO".lower().replace(' ', '')) &
-            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "TERRENOS".lower().replace(' ', '')) &
-            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "ESTOQUE DE TERRENOS".lower().replace(' ', '')) &
-            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "ESTOQUE DE TERRENO".lower().replace(' ', '')) &
-            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "T. ESTOQUE INICIAL".lower().replace(' ', '')) &
-            (df['Denomin.da conta de contrapartida'].str.lower().replace(' ', '') != "T.  EST. TERRENOS".lower().replace(' ', ''))             
+            (df['Denomin.da conta de contrapartida'].str.lower().str.replace(' ', '') != "CUSTO DE TERRENO".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().str.replace(' ', '') != "TERRENOS".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().str.replace(' ', '') != "ESTOQUE DE TERRENOS".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().str.replace(' ', '') != "ESTOQUE DE TERRENO".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().str.replace(' ', '') != "T. ESTOQUE INICIAL".lower().replace(' ', '')) &
+            (df['Denomin.da conta de contrapartida'].str.lower().str.replace(' ', '') != "T.  EST. TERRENOS".lower().replace(' ', ''))             
         ]
         
         return df
