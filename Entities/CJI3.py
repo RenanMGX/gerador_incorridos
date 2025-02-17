@@ -16,7 +16,7 @@ from dependencies.logs import Logs, traceback
 class CJI3(SAPManipulation):
     def __init__(self, *, date:datetime) -> None:
         crd:dict = Credential(Config()['credential']['crd']).load()
-        super().__init__(user=crd.get("user"), password=crd.get("password"), ambiente=crd.get("ambiente"))
+        super().__init__(user=crd.get("user"), password=crd.get("password"), ambiente=crd.get("ambiente"), new_conection=True)
         
         if not isinstance(date, datetime):
             raise TypeError("apenas datetime na instancia 'date'")
